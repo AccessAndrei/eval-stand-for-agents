@@ -16,5 +16,7 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Local agent skills
+# Local agent files
 /.agents/skills/
+/AGENTS.md
+/openspec/
