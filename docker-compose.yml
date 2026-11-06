@@ -4,7 +4,8 @@
 services:
   gateway:
     build: ./services/gateway
-    env_file: .env
+    environment:
+      CLIENT_TOKENS: ${CLIENT_TOKENS:-}
     ports: ["${GATEWAY_PORT:-8080}:8080"]
     depends_on: [harness]
     healthcheck: {test: ["CMD", "true"], interval: 10s}   # заменить на реальную проверку
@@ -18,13 +19,20 @@ services:
 
   sandbox-manager:
     build: ./services/sandbox-manager
-    env_file: .env
+    environment:
+      SANDBOX_CPU: ${SANDBOX_CPU:-1}
+      SANDBOX_MEMORY: ${SANDBOX_MEMORY:-1g}
+      SANDBOX_PIDS: ${SANDBOX_PIDS:-256}
+      SANDBOX_DISK: ${SANDBOX_DISK:-2g}
+      SANDBOX_EXEC_TIMEOUT_S: ${SANDBOX_EXEC_TIMEOUT_S:-120}
     # volumes / privileges — по ADR о способе запуска сандбоксов
     healthcheck: {test: ["CMD", "true"], interval: 10s}
 
   llm-proxy:
     build: ./services/llm-proxy
-    env_file: .env                         # ключ только здесь
+    environment:
+      LLM_PROVIDER_URL: ${LLM_PROVIDER_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}        # ключ только здесь
     healthcheck: {test: ["CMD", "true"], interval: 10s}
 
   # Тестовые сервисы для инфраструктурных тестов: docker compose --profile test up
