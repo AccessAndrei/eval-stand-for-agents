@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["service", "port", "enabled", "tags"],
+  "additionalProperties": false,
+  "properties": {
+    "service": {"type": "string", "const": "calendar"},
+    "port": {"type": "integer", "const": 8137},
+    "enabled": {"type": "boolean", "const": true},
+    "tags": {"type": "array", "const": ["local", "test"], "items": {"type": "string"}}
+  }
+}

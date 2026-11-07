@@ -1,0 +1,7 @@
+[
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo cancel-ready; sleep 60\", \"yield_time_ms\": 30000}"
+  }
+]

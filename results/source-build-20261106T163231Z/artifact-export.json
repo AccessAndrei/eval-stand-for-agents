@@ -1,0 +1,9 @@
+{
+  "source_image_id": "sha256:89d179e3605c83bdde1d55c0e15b2cd10f6b5cbe5976b12842c7652292186c25",
+  "source_build_report": "results/source-build-20261106T163231Z/verification.json",
+  "binary_sha256": "eaec0b85c6d5eda1de19e2a7e35887eebaf000af7c2ef99d725c7d1e34e8ec76",
+  "binary_bytes": 342319384,
+  "export_root": "/Users/moneygrind/Desktop/itmo-agentic-harrness/build/codex-artifact",
+  "exported_at": "2026-11-06T16:48:57.461791+00:00",
+  "temporary_container_removed": true
+}

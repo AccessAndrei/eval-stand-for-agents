@@ -1,0 +1,8 @@
+id: B2.1
+baf: B2
+level: simple
+messages:
+  - "В каком файле определена функция parse_date? Запиши только относительный путь в answer.txt."
+answer_file: answer.txt
+timeout_s: 180
+fixture_files: [README.md, src/main.py, src/utils/dates.py, src/utils/numbers.py]

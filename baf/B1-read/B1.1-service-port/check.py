@@ -14,14 +14,19 @@ EXPECTED = "8137"
 def main() -> None:
     workdir = Path(sys.argv[1])
     answer = workdir / "answer.txt"
-    if not answer.exists():
-        result = {"pass": False, "reason": "answer.txt не создан"}
+    if not answer.is_file() or answer.is_symlink():
+        result = {"pass": False, "reason": "answer.txt не создан либо недопустим"}
+    elif answer.stat().st_size > 65_536:
+        result = {"pass": False, "reason": "answer.txt превышает допустимый размер"}
     else:
-        value = answer.read_text(encoding="utf-8").strip()
+        try:
+            value = answer.read_text(encoding="utf-8").strip()
+        except UnicodeError:
+            value = None
         ok = value == EXPECTED
         result = {
             "pass": ok,
-            "reason": "ok" if ok else f"ожидалось {EXPECTED}, получено {value!r}",
+            "reason": "ok" if ok else f"ожидалось значение порта {EXPECTED}",
         }
     print(json.dumps(result, ensure_ascii=False))
 

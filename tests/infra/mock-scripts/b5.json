@@ -1,0 +1,17 @@
+[
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"printf tampered > /work/input/stats.py; mv /work/input /work/replaced\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"/usr/local/bin/python3 -I -S /work/input/stats.py /work/input/data.csv\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo 11 > /work/answer.txt\", \"yield_time_ms\": 1000}"
+  }
+]

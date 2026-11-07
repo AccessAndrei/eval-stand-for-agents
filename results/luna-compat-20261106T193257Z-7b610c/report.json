@@ -1,0 +1,17 @@
+{
+  "model": "gpt-6-luna",
+  "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+  "generation_requested": true,
+  "sandbox_created": false,
+  "output_limit": 16,
+  "output_bound_verified": true,
+  "profile_compatible": false,
+  "generation_accepted": true,
+  "http_status": 200,
+  "input_tokens": 28,
+  "output_tokens": 16,
+  "total_tokens": 44,
+  "limit_reached": true,
+  "reason": "output_limit_observed",
+  "process_exit_code": 0
+}

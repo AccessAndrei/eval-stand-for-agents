@@ -1,0 +1,308 @@
+{
+  "version": "v0",
+  "suite": "checkpoint1-offline",
+  "passed": false,
+  "error": "proxy-failure",
+  "steps": [
+    {
+      "name": "existing-stack",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/00-existing-stack.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "builder-state",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/01-builder-state.log",
+      "passed": true,
+      "required": false
+    },
+    {
+      "name": "preflight",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/02-preflight.log",
+      "passed": true,
+      "required": true,
+      "evidence": ""
+    },
+    {
+      "name": "images",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/03-images.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-0",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/04-image-0.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-1",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/05-image-1.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-2",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/06-image-2.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-3",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/07-image-3.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-4",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/08-image-4.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-5",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/09-image-5.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-6",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/10-image-6.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-7",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/11-image-7.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "unit-http",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/12-unit-http.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "up",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/13-up.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "select-route-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/14-select-route-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "route",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/15-route.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T205512Z-ce438f"
+    },
+    {
+      "name": "select-route-mock-alt",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/16-select-route-mock-alt.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "route-alt",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/17-route-alt.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T205637Z-063bf8"
+    },
+    {
+      "name": "select-cancel-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/18-select-cancel-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "cancel",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/19-cancel.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T205734Z-7c5de4"
+    },
+    {
+      "name": "select-route-mock-alt",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/20-select-route-mock-alt.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "after-cancel",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/21-after-cancel.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T205824Z-f52da7"
+    },
+    {
+      "name": "select-executor-failure-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/22-select-executor-failure-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "executor-failure",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/23-executor-failure.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T205918Z-1ec5fb"
+    },
+    {
+      "name": "select-route-mock-alt",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/24-select-route-mock-alt.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "after-executor",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/25-after-executor.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T210014Z-56aa78"
+    },
+    {
+      "name": "select-budget-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/26-select-budget-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "budget",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/27-budget.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T210141Z-8ba2b6"
+    },
+    {
+      "name": "select-route-mock-alt",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/28-select-route-mock-alt.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "after-budget",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/29-after-budget.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T210316Z-1adf95"
+    },
+    {
+      "name": "select-proxy-failure-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/30-select-proxy-failure-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "proxy-failure",
+      "returncode": 1,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/31-proxy-failure.log",
+      "passed": false,
+      "required": true,
+      "evidence": "results/native-20261106T210411Z-4d902d"
+    },
+    {
+      "name": "failure-cleanup",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T205312Z-ea34bd/32-failure-cleanup.log",
+      "passed": true,
+      "required": false
+    }
+  ],
+  "coverage": {
+    "unit_http": [
+      "contracts",
+      "checkers",
+      "storage reservations and crash",
+      "lost provision/result responses",
+      "stream interruption and held usage",
+      "live events before terminal",
+      "PID ownership and escalation"
+    ],
+    "native_planned": [
+      "route",
+      "route-alt",
+      "cancel",
+      "after-cancel",
+      "executor-failure",
+      "after-executor",
+      "budget",
+      "after-budget",
+      "proxy-failure",
+      "after-proxy",
+      "manager-recovery",
+      "harness-recovery",
+      "b5",
+      "collector-writer",
+      "collector-interference",
+      "collector-link-swap",
+      "collector-symlink",
+      "collector-size-limit",
+      "make-down",
+      "compose-down"
+    ],
+    "native_executed": [
+      "route",
+      "route-alt",
+      "cancel",
+      "after-cancel",
+      "executor-failure",
+      "after-executor",
+      "budget",
+      "after-budget",
+      "proxy-failure"
+    ],
+    "native_not_run": [
+      "after-proxy",
+      "manager-recovery",
+      "harness-recovery",
+      "b5",
+      "collector-writer",
+      "collector-interference",
+      "collector-link-swap",
+      "collector-symlink",
+      "collector-size-limit",
+      "make-down",
+      "compose-down"
+    ]
+  },
+  "no_live_model_calls": true,
+  "no_image_download_or_build": true
+}

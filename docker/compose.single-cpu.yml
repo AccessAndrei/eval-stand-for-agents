@@ -1,0 +1,9 @@
+# Для base + live-auth или base + mock после preflight --shared-cpu.
+# Docker engine / VM с NCPU=1 задаёт общий потолок; это не 1 CPU на сервис.
+services:
+  gateway: {cpus: 1}
+  harness: {cpus: 1}
+  sandbox-manager: {cpus: 1}
+  llm-proxy: {cpus: 1}
+  runner: {cpus: 1}
+  sandbox-image: {cpus: 1}

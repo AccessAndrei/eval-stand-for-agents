@@ -1,0 +1,16 @@
+{
+  "status": "success",
+  "verified_at": "2026-11-06T16:46:24.293955+00:00",
+  "binary_version": "codex-cli 0.159.3",
+  "binary_sha256": "eaec0b85c6d5eda1de19e2a7e35887eebaf000af7c2ef99d725c7d1e34e8ec76",
+  "image_id": "sha256:89d179e3605c83bdde1d55c0e15b2cd10f6b5cbe5976b12842c7652292186c25",
+  "architecture": "arm64",
+  "native_subcommands": {
+    "app-server": "[experimental] Run the app server or related tooling",
+    "exec-server": "[EXPERIMENTAL] Run the standalone exec-server service"
+  },
+  "initial_verification_error": "Ambient DOCKER_DEFAULT_PLATFORM selected linux/amd64; verified explicitly with --platform=linux/arm64 --pull=never",
+  "ambient_platform": "linux/amd64",
+  "original_report_preserved": true,
+  "source_build": true
+}

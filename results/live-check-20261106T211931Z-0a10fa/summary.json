@@ -1,0 +1,117 @@
+{
+  "passed": true,
+  "row": {
+    "task_id": "B1.1",
+    "run_id": "5c2b9492cb4e490191a26818c9662672",
+    "result": {
+      "artifacts": [
+        {
+          "path": "README.md",
+          "sha256": "9d1823c424a40da7392f2fa8b75aa84f077a43dfab7dfef625902fbecc1b5051",
+          "size_bytes": 90
+        },
+        {
+          "path": "answer.txt",
+          "sha256": "c65a37b003d75b80aaf500ac81fcf0091f9bb5508f580cda1c6fa6fc4bf5461c",
+          "size_bytes": 5
+        },
+        {
+          "path": "src/main.py",
+          "sha256": "0ea6aff0ba9a0468c8189d7a817c9fffc86ed0e7ad7fefa8b4dfabda17c277b7",
+          "size_bytes": 114
+        },
+        {
+          "path": "config/app.yaml",
+          "sha256": "27fd818568b7a3521e12d11b6ef8ec1c4e90f0ab82c07e1077948df7fda1563d",
+          "size_bytes": 166
+        }
+      ],
+      "cleanup_status": "success",
+      "collection_status": "complete",
+      "duration_s": 8.862527129000227,
+      "errors": [],
+      "evidence_status": "not_required",
+      "execution_status": "success",
+      "finished_at": "2026-11-06T21:19:40.942158+00:00",
+      "model": "gpt-6-luna",
+      "provenance": {
+        "architecture": "arm64",
+        "codex_version": "0.159.3",
+        "commit": "01fc69f4026735edfdf6789820549727a4867b11",
+        "image_digest": "sha256:89d179e3605c83bdde1d55c0e15b2cd10f6b5cbe5976b12842c7652292186c25",
+        "origin": "source_build"
+      },
+      "provider_profile": "luna",
+      "provider_snapshot": {
+        "auth": "chatgpt",
+        "budget_mechanism": "observed-usage-v1",
+        "budget_mode": "observed_usage",
+        "enabled": true,
+        "endpoint": "https://chatgpt.com/backend-api/codex",
+        "model": "gpt-6-luna",
+        "name": "luna",
+        "output_limit": 2048,
+        "protocol": "responses",
+        "timeout_s": 180
+      },
+      "run_id": "5c2b9492cb4e490191a26818c9662672",
+      "started_at": "2026-11-06T21:19:32.079633+00:00",
+      "task_id": "B1.1",
+      "tokens": {
+        "actual": 9762,
+        "cached": 2176,
+        "input": 9659,
+        "limit": 30000,
+        "mode": "observed_usage",
+        "output": 103,
+        "output_limit": 2048,
+        "over_target": false,
+        "reserved": 0,
+        "unknown_reason": null
+      },
+      "trace_id": "5c2b9492cb4e490191a26818c9662672",
+      "version": "v0"
+    },
+    "checker_status": "passed",
+    "checker_reason": "ok",
+    "skip_reason": null,
+    "trace_path": "5c2b9492cb4e490191a26818c9662672/events.jsonl",
+    "artifact_path": "5c2b9492cb4e490191a26818c9662672/work",
+    "errors": []
+  },
+  "stop_reason": null,
+  "proxy": {
+    "run_id": "5c2b9492cb4e490191a26818c9662672",
+    "provider_profile": "luna",
+    "model": "gpt-6-luna",
+    "provider_snapshot": {
+      "name": "luna",
+      "model": "gpt-6-luna",
+      "endpoint": "https://chatgpt.com/backend-api/codex",
+      "protocol": "responses",
+      "auth": "chatgpt",
+      "timeout_s": 180,
+      "output_limit": 2048,
+      "budget_mechanism": "observed-usage-v1",
+      "enabled": true,
+      "budget_mode": "observed_usage"
+    },
+    "profile_unknown_reason": null,
+    "tokens": {
+      "limit": 30000,
+      "mode": "observed_usage",
+      "output_limit": 2048,
+      "over_target": false,
+      "actual": 9762,
+      "input": 9659,
+      "output": 103,
+      "cached": 2176,
+      "reserved": 0,
+      "unknown_reason": null
+    },
+    "closed": true,
+    "error": null,
+    "requests": 4,
+    "upstream_failure": null
+  }
+}

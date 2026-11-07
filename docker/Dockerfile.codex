@@ -1,0 +1,42 @@
+# Собственный Python-контроллер запускает эту сборку в выделенном BuildKit.
+FROM rust:1.95-slim-bookworm@sha256:d7482085ff5b415f84dba5647ae71606650bdef00db7aeb69f4b3d170c3e4082 AS source
+ARG CODEX_COMMIT=01fc69f4026735edfdf6789820549727a4867b11
+ENV DEBIAN_FRONTEND=noninteractive \
+    RUSTUP_TOOLCHAIN=1.95.0 \
+    CARGO_BUILD_JOBS=1 \
+    CARGO_INCREMENTAL=0 \
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=clang \
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=clang \
+    RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git python3 build-essential pkg-config libssl-dev libcap-dev libasound2-dev \
+    clang lld cmake ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+RUN git init /src && git -C /src remote add origin https://github.com/openai/codex.git \
+    && git -C /src fetch --depth=1 origin ${CODEX_COMMIT} \
+    && git -C /src checkout --detach FETCH_HEAD \
+    && test "$(git -C /src rev-parse HEAD)" = "${CODEX_COMMIT}" \
+    && test -z "$(git -C /src status --porcelain)"
+COPY scripts/build_codex.py /opt/build_codex.py
+RUN python3 /opt/build_codex.py --normalize-lock /src/codex-rs
+WORKDIR /src/codex-rs
+RUN --mount=type=cache,id=eval-stand-codex-cargo-registry,target=/usr/local/cargo/registry \
+    --mount=type=cache,id=eval-stand-codex-cargo-git,target=/usr/local/cargo/git \
+    --mount=type=cache,id=eval-stand-codex-target,target=/src/codex-rs/target \
+    cargo build --locked --jobs 1 --profile dev-small --package codex-cli --bin codex \
+    && mkdir -p /out && cp target/dev-small/codex /out/codex \
+    && /out/codex --version \
+    && python3 /opt/build_codex.py --write-provenance /src/codex-rs
+
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates libssl3 libcap2 libasound2 libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=source /out/codex /usr/local/bin/codex
+COPY --from=source /src/codex-rs/.build-evidence/ /usr/local/share/codex-build/
+LABEL org.opencontainers.image.source="https://github.com/openai/codex" \
+      org.opencontainers.image.revision="01fc69f4026735edfdf6789820549727a4867b11" \
+      org.eval-stand.codex-origin="source_build" \
+      org.eval-stand.codex-version="0.159.3"
+ENTRYPOINT ["/usr/local/bin/codex"]
+CMD ["--version"]

@@ -1,0 +1,12 @@
+{
+  "model": "gpt-6-luna",
+  "endpoint": "https://chatgpt.com/backend-api/codex/responses/input_tokens",
+  "generation_requested": false,
+  "sandbox_created": false,
+  "input_count_supported": false,
+  "output_bound_verified": false,
+  "profile_compatible": false,
+  "http_status": 404,
+  "reason": "input_count_not_confirmed",
+  "process_exit_code": 2
+}

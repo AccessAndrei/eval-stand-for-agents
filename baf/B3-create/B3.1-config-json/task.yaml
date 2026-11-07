@@ -1,0 +1,8 @@
+id: B3.1
+baf: B3
+level: simple
+messages:
+  - "Создай config.json в корне рабочей папки по требованиям spec.md."
+answer_file: config.json
+timeout_s: 180
+fixture_files: [spec.md]

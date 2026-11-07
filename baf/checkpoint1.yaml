@@ -1,0 +1,7 @@
+version: 0
+tasks:
+  - {id: B1.1, directory: B1-read/B1.1-service-port}
+  - {id: B2.1, directory: B2-search/B2.1-parse-date}
+  - {id: B3.1, directory: B3-create/B3.1-config-json}
+  - {id: B4.1, directory: B4-edit/B4.1-install-version}
+  - {id: B5.1, directory: B5-tool/B5.1-median}

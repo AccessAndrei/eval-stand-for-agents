@@ -20,3 +20,12 @@ Thumbs.db
 /.agents/skills/
 /AGENTS.md
 /openspec/
+
+# Generated binaries from the pinned source build
+/build/codex-artifact/
+
+# Private ChatGPT credentials and all native-login/rotation intermediates
+/.auth/
+
+# Generated runs; selected summaries and evidence archives are tracked explicitly.
+/results/*

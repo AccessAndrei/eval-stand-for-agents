@@ -5,3 +5,4 @@ messages:
   - "На каком порту слушает сервис? Запиши только число в файл answer.txt в корне рабочей папки."
 answer_file: answer.txt
 timeout_s: 180
+fixture_files: [README.md, config/app.yaml, src/main.py]

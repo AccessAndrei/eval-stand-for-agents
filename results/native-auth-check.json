@@ -1,0 +1,9 @@
+{
+  "unauthenticated_reads": {
+    "/health": 401,
+    "/v0/runs/native-d9ae041428ba42f2a8e796f04161e40d": 401,
+    "/v0/runs/native-d9ae041428ba42f2a8e796f04161e40d/events": 401,
+    "/v0/runs/native-d9ae041428ba42f2a8e796f04161e40d/artifacts": 401
+  },
+  "passed": true
+}

@@ -1,0 +1,22 @@
+# Явный live-контур: авторизация только у владельца и read-only посредника.
+services:
+  harness:
+    environment:
+      AUTH_STORE: /auth
+      PROXY_URL: http://llm-proxy:8000
+      PROXY_TOKEN: ${PROXY_TOKEN:-}
+    volumes:
+      - type: bind
+        source: ${AUTH_STORE_PATH:-./.auth}
+        target: /auth
+        bind: {create_host_path: false}
+
+  llm-proxy:
+    environment:
+      AUTH_STORE: /auth
+    volumes:
+      - type: bind
+        source: ${AUTH_STORE_PATH:-./.auth}
+        target: /auth
+        read_only: true
+        bind: {create_host_path: false}

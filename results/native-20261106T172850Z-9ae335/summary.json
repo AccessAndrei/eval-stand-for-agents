@@ -1,0 +1,35 @@
+{
+  "run_id": "native-fc335c8598b44ca8a92065c40bfa9858",
+  "profile": "mock",
+  "scenario": "route",
+  "native": true,
+  "execution_status": "success",
+  "collection_status": "complete",
+  "cleanup_status": "success",
+  "errors": [],
+  "marker_observed": true,
+  "native_uid_1000": true,
+  "file_change_observed": true,
+  "collected_patch": "из сандбокса\n",
+  "secret_leak": false,
+  "sandbox_observed": true,
+  "control_unchanged": true,
+  "collector_observed": true,
+  "tokens": {
+    "actual": 14442,
+    "cached": 0,
+    "input": 14141,
+    "limit": 30000,
+    "output": 301,
+    "reserved": 0,
+    "unknown_reason": null
+  },
+  "provenance": {
+    "architecture": "arm64",
+    "codex_version": "0.159.3",
+    "commit": "01fc69f4026735edfdf6789820549727a4867b11",
+    "image_digest": "sha256:89d179e3605c83bdde1d55c0e15b2cd10f6b5cbe5976b12842c7652292186c25",
+    "origin": "source_build"
+  },
+  "passed": true
+}

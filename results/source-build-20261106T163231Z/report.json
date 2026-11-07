@@ -1,0 +1,127 @@
+{
+  "source_commit": "01fc69f4026735edfdf6789820549727a4867b11",
+  "status": "failed",
+  "memory_limit_bytes": 7000000000,
+  "cpu_quota": 1,
+  "timeout_s": 3251,
+  "profile": "dev-small",
+  "started_at": "2026-11-06T16:32:31.615645+00:00",
+  "attempt_reason": "Previous chat interruption canceled BuildKit transport; original experiment deadline 2026-11-06T17:26:43Z retained",
+  "platform": "linux/arm64",
+  "available_memory_bytes": 8291328000,
+  "disk_before": "{\"Active\":\"1\",\"Reclaimable\":\"231.2MB (20%)\",\"Size\":\"1.115GB\",\"TotalCount\":\"7\",\"Type\":\"Images\"}\n{\"Active\":\"0\",\"Reclaimable\":\"42B (100%)\",\"Size\":\"42B\",\"TotalCount\":\"1\",\"Type\":\"Containers\"}\n{\"Active\":\"1\",\"Reclaimable\":\"0B (0%)\",\"Size\":\"2.087GB\",\"TotalCount\":\"1\",\"Type\":\"Local Volumes\"}\n{\"Active\":\"0\",\"Reclaimable\":\"10.1GB\",\"Size\":\"10.5GB\",\"TotalCount\":\"221\",\"Type\":\"Build Cache\"}",
+  "builder": {
+    "Id": "aaae8cb23d3c3858ead2ba1988ccae5aa3e2b1cbfb8c15804f21d8683456f239",
+    "Image": "sha256:a04cef08d52e5738b74811a4847972a948b6eb9e1dd91f4675e0d5995179f9fe",
+    "HostConfig": {
+      "Binds": null,
+      "ContainerIDFile": "",
+      "LogConfig": {
+        "Type": "local",
+        "Config": {}
+      },
+      "NetworkMode": "bridge",
+      "PortBindings": {},
+      "RestartPolicy": {
+        "Name": "no",
+        "MaximumRetryCount": 0
+      },
+      "AutoRemove": false,
+      "VolumeDriver": "",
+      "VolumesFrom": null,
+      "ConsoleSize": [
+        0,
+        0
+      ],
+      "CapAdd": null,
+      "CapDrop": null,
+      "CgroupnsMode": "private",
+      "Dns": null,
+      "DnsOptions": null,
+      "DnsSearch": null,
+      "ExtraHosts": null,
+      "GroupAdd": null,
+      "IpcMode": "private",
+      "Cgroup": "",
+      "Links": null,
+      "OomScoreAdj": 0,
+      "PidMode": "",
+      "Privileged": true,
+      "PublishAllPorts": false,
+      "ReadonlyRootfs": false,
+      "SecurityOpt": [
+        "label=disable"
+      ],
+      "UTSMode": "",
+      "UsernsMode": "",
+      "ShmSize": 67108864,
+      "Runtime": "runc",
+      "Isolation": "",
+      "CpuShares": 0,
+      "Memory": 7000000000,
+      "NanoCpus": 0,
+      "CgroupParent": "/docker/buildx",
+      "BlkioWeight": 0,
+      "BlkioWeightDevice": null,
+      "BlkioDeviceReadBps": null,
+      "BlkioDeviceWriteBps": null,
+      "BlkioDeviceReadIOps": null,
+      "BlkioDeviceWriteIOps": null,
+      "CpuPeriod": 100000,
+      "CpuQuota": 100000,
+      "CpuRealtimePeriod": 0,
+      "CpuRealtimeRuntime": 0,
+      "CpusetCpus": "",
+      "CpusetMems": "",
+      "Devices": null,
+      "DeviceCgroupRules": null,
+      "DeviceRequests": null,
+      "MemoryReservation": 0,
+      "MemorySwap": 7000000000,
+      "MemorySwappiness": null,
+      "OomKillDisable": null,
+      "PidsLimit": null,
+      "Ulimits": null,
+      "CpuCount": 0,
+      "CpuPercent": 0,
+      "IOMaximumIOps": 0,
+      "IOMaximumBandwidth": 0,
+      "Mounts": [
+        {
+          "Type": "volume",
+          "Source": "buildx_buildkit_eval-stand-codex-source0_state",
+          "Target": "/var/lib/buildkit"
+        }
+      ],
+      "MaskedPaths": null,
+      "ReadonlyPaths": null,
+      "Init": true
+    },
+    "Mounts": [
+      {
+        "Type": "volume",
+        "Name": "buildx_buildkit_eval-stand-codex-source0_state",
+        "Source": "/var/lib/docker/volumes/buildx_buildkit_eval-stand-codex-source0_state/_data",
+        "Destination": "/var/lib/buildkit",
+        "Driver": "local",
+        "Mode": "z",
+        "RW": true,
+        "Propagation": ""
+      }
+    ]
+  },
+  "final_measurement": {
+    "time": "2026-11-06T16:43:33.865756+00:00",
+    "memory_peak_bytes": "6999998464",
+    "memory_current_bytes": "5343440896",
+    "memory_events": "low 0\nhigh 0\nmax 1086\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 2",
+    "builder_disk": "Filesystem           1-blocks       Used Available Use% Mounted on\n/dev/vda1            33639112704 31740227584 163864576  99% /etc/hostname",
+    "builder_state_kib": "8325076\t/var/lib/buildkit"
+  },
+  "image_id": "sha256:89d179e3605c83bdde1d55c0e15b2cd10f6b5cbe5976b12842c7652292186c25",
+  "image_size_bytes": 449468764,
+  "error": "Unable to find image 'eval-stand-codex:0.159.3' locally\ndocker: Error response from daemon: pull access denied for eval-stand-codex, repository does not exist or may require 'docker login': denied: requested access to the resource is denied\n\nRun 'docker run --help' for more information\n",
+  "builder_stopped": true,
+  "disk_after": "{\"Active\":\"1\",\"Reclaimable\":\"680.7MB (43%)\",\"Size\":\"1.565GB\",\"TotalCount\":\"8\",\"Type\":\"Images\"}\n{\"Active\":\"0\",\"Reclaimable\":\"42B (100%)\",\"Size\":\"42B\",\"TotalCount\":\"1\",\"Type\":\"Containers\"}\n{\"Active\":\"1\",\"Reclaimable\":\"0B (0%)\",\"Size\":\"2.858GB\",\"TotalCount\":\"1\",\"Type\":\"Local Volumes\"}\n{\"Active\":\"0\",\"Reclaimable\":\"10.1GB\",\"Size\":\"10.5GB\",\"TotalCount\":\"221\",\"Type\":\"Build Cache\"}",
+  "duration_s": 665.6575802920852
+}

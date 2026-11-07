@@ -1,0 +1,7 @@
+[
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo survived > /work/recovery-marker.txt; echo recovery-ready; sleep 60\", \"yield_time_ms\": 30000}"
+  }
+]

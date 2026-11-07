@@ -1,0 +1,12 @@
+[
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo executor-ready; sleep 15\", \"yield_time_ms\": 30000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"printf forbidden > /work/fallback-created.txt; printf forbidden > /tmp/native-control.txt\", \"yield_time_ms\": 1000}"
+  }
+]

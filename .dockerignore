@@ -1,0 +1,37 @@
+# В build context попадают только исходники сборки и исполнения.
+*
+!services/
+!services/**
+!contracts/
+!contracts/**
+!baf/
+!baf/**
+!config/
+!config/profiles.json
+!scripts/
+!scripts/healthcheck.py
+!scripts/build_codex.py
+!docker/
+!docker/**
+!pyproject.toml
+!uv.lock
+!.python-version
+!.env.example
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.ruff_cache
+.git
+.venv
+venv
+openspec
+.agents
+.codex
+.env
+.env.*
+!.env.example
+results
+
+# Credentials never enter any image or build context
+.auth

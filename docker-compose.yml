@@ -1,44 +1,170 @@
-# Заготовка. Все собственные сервисы собираются из исходников (build), базовые образы — с закреплённой версией.
-# Как сандбокс-менеджер запускает сандбоксы (Docker socket / rootless / sysbox / gVisor) — решение в ADR.
+name: ${COMPOSE_PROJECT_NAME:-eval-stand}
+
+x-build: &build
+  context: .
+  dockerfile: docker/Dockerfile.services
+  args:
+    SERVICE_UID: ${LOCAL_UID:-1000}
+    SERVICE_GID: ${LOCAL_GID:-1000}
+  additional_contexts:
+    codex-source: ./build/codex-artifact
+
+x-service: &service
+  platform: ${DOCKER_PLATFORM:-linux/arm64}
+  init: true
+  restart: "no"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  cpus: 0.09
+  mem_limit: 192000000
+  memswap_limit: 192000000
+  pids_limit: 128
+  tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=8000000,mode=1777"]
+  logging:
+    driver: local
+    options: {max-size: "1m", max-file: "2"}
+
+x-health: &health
+  interval: 20s
+  timeout: 20s
+  retries: 6
+  start_period: 45s
 
 services:
-  gateway:
-    build: ./services/gateway
+  runner:
+    <<: *service
+    profiles: [tools]
+    build: {<<: *build, target: runner}
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    networks: [control]
+    cpus: 0.04
+    mem_limit: 192000000
+    memswap_limit: 192000000
     environment:
-      CLIENT_TOKENS: ${CLIENT_TOKENS:-}
-    ports: ["${GATEWAY_PORT:-8080}:8080"]
-    depends_on: [harness]
-    healthcheck: {test: ["CMD", "true"], interval: 10s}   # заменить на реальную проверку
+      GATEWAY_URL: http://gateway:8080
+      CLIENT_TOKEN: ${CLIENT_TOKEN:-}
+      RUNNER_STORAGE_BYTES: ${RUNNER_STORAGE_BYTES:-1000000000}
+    volumes:
+      - type: bind
+        source: ${RESULTS_PATH:-./results}
+        target: /results
+        bind: {create_host_path: false}
+    command: [--profile, luna, --results, /results]
+    stop_grace_period: 100s
+
+  # Одноразовая проверка собранного образа, не пятый постоянный сервис.
+  sandbox-image:
+    <<: *service
+    build: {<<: *build, target: sandbox}
+    image: eval-stand-sandbox:0.159.3
+    pull_policy: never
+    network_mode: none
+    mem_limit: 64000000
+    memswap_limit: 64000000
+    command: ["/usr/local/bin/codex", "--version"]
+
+  gateway:
+    <<: *service
+    build: {<<: *build, target: gateway}
+    networks: [control, gateway-ingress]
+    environment:
+      PROJECT_ID: ${PROJECT_ID:-eval-stand}
+      CLIENT_TOKEN: ${CLIENT_TOKEN:-}
+      MANAGER_TOKEN: ${MANAGER_TOKEN:-}
+      HARNESS_TOKEN: ${HARNESS_TOKEN:-}
+      PROXY_TOKEN: ${PROXY_TOKEN:-}
+      MANAGER_URL: http://sandbox-manager:8081
+      HARNESS_URL: http://harness:8083
+      PROXY_URL: http://llm-proxy:8000
+      GATEWAY_STATE: /state
+      STATE_LIMIT_BYTES: ${STATE_LIMIT_BYTES:-1000000000}
+      PROVENANCE_FILE: /run/provenance.json
+    ports: ["127.0.0.1:${GATEWAY_PORT:-8080}:8080"]
+    volumes:
+      - gateway-state:/state
+      - type: bind
+        source: ${PROVENANCE_PATH:-./results/source-build/provenance.runtime.json}
+        target: /run/provenance.json
+        read_only: true
+        bind: {create_host_path: false}
+    depends_on:
+      harness: {condition: service_healthy}
+      sandbox-manager: {condition: service_healthy}
+      llm-proxy: {condition: service_healthy}
+    stop_grace_period: 100s
+    healthcheck:
+      <<: *health
+      test: [CMD, python, /app/scripts/healthcheck.py, "http://127.0.0.1:8080/health", --token-env, CLIENT_TOKEN]
 
   harness:
-    build: ./services/harness
+    <<: *service
+    build: {<<: *build, target: harness}
+    networks: [control]
+    mem_limit: 512000000
+    memswap_limit: 512000000
     environment:
-      LLM_URL: http://llm-proxy:8000      # харнес ходит в модель только через прокси
-    depends_on: [llm-proxy, sandbox-manager]
-    healthcheck: {test: ["CMD", "true"], interval: 10s}
+      HARNESS_TOKEN: ${HARNESS_TOKEN:-}
+      MANAGER_TOKEN: ${MANAGER_TOKEN:-}
+      MANAGER_TUNNEL_URL: http://sandbox-manager:8082
+      HARNESS_STATE: /state
+      CODEX_BINARY: /usr/local/bin/codex
+    volumes: [harness-state:/state]
+    depends_on:
+      sandbox-manager: {condition: service_healthy}
+      llm-proxy: {condition: service_healthy}
+    stop_grace_period: 100s
+    healthcheck:
+      <<: *health
+      test: [CMD, python, /app/scripts/healthcheck.py, "http://127.0.0.1:8083/health", --token-env, HARNESS_TOKEN, --codex]
 
   sandbox-manager:
-    build: ./services/sandbox-manager
+    <<: *service
+    build: {<<: *build, target: manager}
+    networks: [control]
     environment:
-      SANDBOX_CPU: ${SANDBOX_CPU:-1}
-      SANDBOX_MEMORY: ${SANDBOX_MEMORY:-1g}
-      SANDBOX_PIDS: ${SANDBOX_PIDS:-256}
-      SANDBOX_DISK: ${SANDBOX_DISK:-2g}
-      SANDBOX_EXEC_TIMEOUT_S: ${SANDBOX_EXEC_TIMEOUT_S:-120}
-    # volumes / privileges — по ADR о способе запуска сандбоксов
-    healthcheck: {test: ["CMD", "true"], interval: 10s}
+      MANAGER_TOKEN: ${MANAGER_TOKEN:-}
+      PROJECT_ID: ${PROJECT_ID:-eval-stand}
+      MANAGER_STATE: /state
+      SANDBOX_IMAGE: eval-stand-sandbox:0.159.3
+    volumes:
+      - manager-state:/state
+      - type: bind
+        source: ${DOCKER_SOCKET:-/var/run/docker.sock}
+        target: /var/run/docker.sock
+        bind: {create_host_path: false}
+    depends_on:
+      sandbox-image: {condition: service_completed_successfully}
+    stop_grace_period: 100s
+    healthcheck:
+      <<: *health
+      test: [CMD, python, /app/scripts/healthcheck.py, "http://127.0.0.1:8081/health", --token-env, MANAGER_TOKEN]
 
   llm-proxy:
-    build: ./services/llm-proxy
+    <<: *service
+    build: {<<: *build, target: proxy}
     environment:
-      LLM_PROVIDER_URL: ${LLM_PROVIDER_URL:-}
-      LLM_API_KEY: ${LLM_API_KEY:-}        # ключ только здесь
-    healthcheck: {test: ["CMD", "true"], interval: 10s}
+      INTERNAL_TOKEN: ${PROXY_TOKEN:-}
+      PROFILES_PATH: /app/config/profiles.json
+      PROXY_STATE_DIR: /state
+    volumes: [proxy-state:/state]
+    networks: [control, proxy-egress]
+    stop_grace_period: 30s
+    healthcheck:
+      <<: *health
+      test: [CMD, python, /app/scripts/healthcheck.py, "http://127.0.0.1:8000/health", --token-env, INTERNAL_TOKEN]
 
-  # Тестовые сервисы для инфраструктурных тестов: docker compose --profile test up
-  allowed-http:
-    profiles: [test]
-    image: nginx:1.27-alpine
-  blocked-http:
-    profiles: [test]
-    image: nginx:1.27-alpine
+networks:
+  control: {internal: true}
+  gateway-ingress:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+      com.docker.network.bridge.enable_icc: "false"
+  proxy-egress: {}
+
+volumes:
+  gateway-state:
+  harness-state:
+  manager-state:
+  proxy-state:

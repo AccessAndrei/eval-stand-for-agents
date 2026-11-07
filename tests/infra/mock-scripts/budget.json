@@ -1,0 +1,102 @@
+[
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-1 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-2 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-3 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-4 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-5 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-6 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-7 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-8 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-9 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-10 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-11 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-12 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-13 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-14 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-15 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-16 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-17 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-18 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-19 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"echo step-20 >> /work/budget-log.txt\", \"yield_time_ms\": 1000}"
+  }
+]

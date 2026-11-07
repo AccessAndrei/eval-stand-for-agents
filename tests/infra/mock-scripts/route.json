@@ -1,0 +1,17 @@
+[
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"printf native_uid=; id -u; cat /work/container-marker.txt; env; echo sandbox-command > /tmp/native-control.txt\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "custom_tool_call",
+    "name": "apply_patch",
+    "input": "*** Begin Patch\n*** Add File: /work/route-proof.txt\n+из сандбокса\n*** Update File: /tmp/native-control.txt\n@@\n-sandbox-command\n+sandbox-patched\n*** End Patch"
+  },
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"cat /work/route-proof.txt; cat /tmp/native-control.txt\", \"yield_time_ms\": 1000}"
+  }
+]

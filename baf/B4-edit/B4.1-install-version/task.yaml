@@ -1,0 +1,8 @@
+id: B4.1
+baf: B4
+level: simple
+messages:
+  - "В README.md обнови версию с 1.2 до 1.3 только в разделе Install. Остальные байты README.md и остальные файлы оставь без изменений. Не создавай новые файлы."
+answer_file: README.md
+timeout_s: 180
+fixture_files: [README.md, settings.ini]

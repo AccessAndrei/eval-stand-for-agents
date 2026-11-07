@@ -1,0 +1,1356 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:eval-stand-for-agents:contracts:v0",
+  "title": "Контракты одного прогона и набора первого чекпоинта",
+  "$comment": "Валидация межполевых инвариантов дополнена contracts.validate. Авторизация проверяется транспортом до чтения и изменения состояния. Нативный протокол Codex не переопределяется.",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*[\\\\:\\x00-\\x1f\\x7f])(?!.*//)(?!.*%[0-9a-fA-F]{2})[^/]+(?:/[^/]+)*$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "task_id": {
+      "enum": [
+        "B1.1",
+        "B2.1",
+        "B3.1",
+        "B4.1",
+        "B5.1"
+      ]
+    },
+    "profile": {
+      "enum": [
+        "luna",
+        "mock",
+        "mock-alt",
+        "deepseek"
+      ]
+    },
+    "file": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 1048576
+        }
+      },
+      "required": [
+        "path",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "path",
+        "size_bytes",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "stage": {
+      "enum": [
+        "validation",
+        "provision",
+        "execution",
+        "collection",
+        "cleanup",
+        "checker",
+        "storage",
+        "recovery",
+        "provider",
+        "auth"
+      ]
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "stage": {
+          "$ref": "#/$defs/stage"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "stage",
+        "code",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "tokens": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "const": 30000
+        },
+        "actual": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unknown_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reserved": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30000
+        },
+        "input": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cached": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mode": {
+          "enum": [
+            "strict",
+            "observed_usage"
+          ]
+        },
+        "output_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30000
+        },
+        "over_target": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "limit",
+        "actual",
+        "unknown_reason",
+        "reserved",
+        "input",
+        "output",
+        "cached"
+      ],
+      "additionalProperties": false,
+      "dependentRequired": {
+        "mode": [
+          "output_limit",
+          "over_target"
+        ],
+        "output_limit": [
+          "mode",
+          "over_target"
+        ],
+        "over_target": [
+          "mode",
+          "output_limit"
+        ]
+      },
+      "$comment": "limit: строгий потолок для strict, целевой расход для observed_usage. reserved в observed_usage учитывает только pending output cap, без гарантии входа. Старые записи без mode трактуются как strict."
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "codex_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "commit": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "origin": {
+          "enum": [
+            "source_build",
+            "upstream_diagnostic",
+            "unavailable"
+          ]
+        },
+        "image_digest": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "architecture": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "codex_version",
+        "commit",
+        "origin",
+        "image_digest",
+        "architecture"
+      ],
+      "additionalProperties": false
+    },
+    "execution_status": {
+      "enum": [
+        "success",
+        "command_error",
+        "timeout",
+        "sandbox_error",
+        "transport_error",
+        "provider_error",
+        "auth_error",
+        "cancelled",
+        "interrupted",
+        "budget_exceeded",
+        "storage_budget_exceeded",
+        "not_started"
+      ]
+    },
+    "collection_status": {
+      "enum": [
+        "complete",
+        "incomplete",
+        "not_started"
+      ]
+    },
+    "cleanup_status": {
+      "enum": [
+        "success",
+        "failed",
+        "not_started"
+      ]
+    },
+    "evidence_status": {
+      "enum": [
+        "complete",
+        "incomplete",
+        "not_required"
+      ]
+    },
+    "launch": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "task_id": {
+          "$ref": "#/$defs/task_id"
+        },
+        "provider_profile": {
+          "$ref": "#/$defs/profile"
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32768
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/file"
+          },
+          "maxItems": 256
+        },
+        "timeout_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600
+        },
+        "read_only_paths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "maxItems": 256
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "task_id",
+        "provider_profile",
+        "prompt",
+        "files",
+        "timeout_s"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "trace_id": {
+          "$ref": "#/$defs/id"
+        },
+        "task_id": {
+          "$ref": "#/$defs/task_id"
+        },
+        "provider_profile": {
+          "$ref": "#/$defs/profile"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "execution_status": {
+          "$ref": "#/$defs/execution_status"
+        },
+        "collection_status": {
+          "$ref": "#/$defs/collection_status"
+        },
+        "cleanup_status": {
+          "$ref": "#/$defs/cleanup_status"
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/evidence_status"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/error"
+          },
+          "maxItems": 64
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact"
+          },
+          "maxItems": 256
+        },
+        "tokens": {
+          "$ref": "#/$defs/tokens"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finished_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "duration_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        },
+        "provider_snapshot": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/provider_snapshot"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "trace_id",
+        "task_id",
+        "provider_profile",
+        "model",
+        "execution_status",
+        "collection_status",
+        "cleanup_status",
+        "evidence_status",
+        "errors",
+        "artifacts",
+        "tokens",
+        "started_at",
+        "finished_at",
+        "duration_s",
+        "provenance"
+      ],
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "task_id": {
+          "$ref": "#/$defs/task_id"
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "state": {
+          "enum": [
+            "accepted",
+            "provisioning",
+            "running",
+            "cancelling",
+            "collecting",
+            "cleaning",
+            "recovering",
+            "terminal"
+          ]
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/result"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "task_id",
+        "fingerprint",
+        "state",
+        "updated_at",
+        "result"
+      ],
+      "additionalProperties": false
+    },
+    "cancel": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "version",
+        "run_id"
+      ],
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "trace_id": {
+          "$ref": "#/$defs/id"
+        },
+        "task_id": {
+          "$ref": "#/$defs/task_id"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "stage": {
+          "$ref": "#/$defs/stage"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "duration_s": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "output_truncated": {
+          "type": "boolean"
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/evidence_status"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/error"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "trace_id",
+        "task_id",
+        "sequence",
+        "timestamp",
+        "stage",
+        "type",
+        "evidence_status"
+      ],
+      "additionalProperties": false
+    },
+    "provision": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "project_id": {
+          "$ref": "#/$defs/id"
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "task_id": {
+          "$ref": "#/$defs/task_id"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/file"
+          },
+          "maxItems": 256
+        },
+        "read_only_paths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "maxItems": 256
+        },
+        "timeout_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "project_id",
+        "fingerprint",
+        "task_id",
+        "files",
+        "read_only_paths",
+        "timeout_s"
+      ],
+      "additionalProperties": false
+    },
+    "lookup": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "project_id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    "collect": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "project_id": {
+          "$ref": "#/$defs/id"
+        },
+        "handle": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "project_id",
+        "handle"
+      ],
+      "additionalProperties": false
+    },
+    "release": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "project_id": {
+          "$ref": "#/$defs/id"
+        },
+        "handle": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "project_id",
+        "handle"
+      ],
+      "additionalProperties": false
+    },
+    "manager_cancel": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "project_id": {
+          "$ref": "#/$defs/id"
+        },
+        "handle": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "project_id",
+        "handle"
+      ],
+      "additionalProperties": false
+    },
+    "connect": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "project_id": {
+          "$ref": "#/$defs/id"
+        },
+        "handle": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "project_id",
+        "handle"
+      ],
+      "additionalProperties": false
+    },
+    "manager_status": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "project_id": {
+          "$ref": "#/$defs/id"
+        },
+        "handle": {
+          "$ref": "#/$defs/id"
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "state": {
+          "enum": [
+            "provisioning",
+            "ready",
+            "executing",
+            "quiescing",
+            "collected",
+            "released",
+            "failed",
+            "recovering"
+          ]
+        },
+        "collection_status": {
+          "$ref": "#/$defs/collection_status"
+        },
+        "cleanup_status": {
+          "$ref": "#/$defs/cleanup_status"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/error"
+          },
+          "maxItems": 64
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "project_id",
+        "handle",
+        "fingerprint",
+        "state",
+        "collection_status",
+        "cleanup_status",
+        "errors"
+      ],
+      "additionalProperties": false
+    },
+    "checker_status": {
+      "enum": [
+        "passed",
+        "failed",
+        "checker_error",
+        "not_run_collection_failed",
+        "not_run_evidence_incomplete",
+        "not_run"
+      ]
+    },
+    "task_report": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "$ref": "#/$defs/task_id"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/result"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checker_status": {
+          "$ref": "#/$defs/checker_status"
+        },
+        "checker_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "skip_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trace_path": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/path"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "artifact_path": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/path"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/error"
+          },
+          "maxItems": 64
+        }
+      },
+      "required": [
+        "task_id",
+        "run_id",
+        "result",
+        "checker_status",
+        "checker_reason",
+        "skip_reason",
+        "trace_path",
+        "artifact_path"
+      ],
+      "additionalProperties": false
+    },
+    "course_model_status": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "confirmed",
+            "unconfirmed"
+          ]
+        },
+        "model_version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "intelligence_index": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checked_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "model_version",
+        "intelligence_index",
+        "checked_at",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "report": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "batch_id": {
+          "$ref": "#/$defs/id"
+        },
+        "provider_profile": {
+          "$ref": "#/$defs/profile"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finished_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/task_report"
+          },
+          "maxItems": 5,
+          "minItems": 5
+        },
+        "evaluated": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "wrong_answers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "technical_skips": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "course_model_status": {
+          "$ref": "#/$defs/course_model_status"
+        }
+      },
+      "required": [
+        "version",
+        "batch_id",
+        "provider_profile",
+        "started_at",
+        "finished_at",
+        "tasks",
+        "evaluated",
+        "wrong_answers",
+        "technical_skips",
+        "success",
+        "course_model_status"
+      ],
+      "additionalProperties": false
+    },
+    "command_event": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "commandExecution"
+            },
+            "run_id": {
+              "$ref": "#/$defs/id"
+            },
+            "thread_id": {
+              "$ref": "#/$defs/id"
+            },
+            "turn_id": {
+              "$ref": "#/$defs/id"
+            },
+            "item_id": {
+              "$ref": "#/$defs/id"
+            },
+            "command": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "cwd": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "phase": {
+              "const": "started"
+            },
+            "source": {
+              "enum": [
+                "agent",
+                "userShell",
+                "unifiedExecStartup",
+                "unifiedExecInteraction"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "run_id",
+            "thread_id",
+            "turn_id",
+            "item_id",
+            "command",
+            "cwd",
+            "phase",
+            "source"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "commandExecution"
+            },
+            "run_id": {
+              "$ref": "#/$defs/id"
+            },
+            "thread_id": {
+              "$ref": "#/$defs/id"
+            },
+            "turn_id": {
+              "$ref": "#/$defs/id"
+            },
+            "item_id": {
+              "$ref": "#/$defs/id"
+            },
+            "command": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "cwd": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "phase": {
+              "const": "completed"
+            },
+            "exit_code": {
+              "type": "integer"
+            },
+            "source": {
+              "enum": [
+                "agent",
+                "userShell",
+                "unifiedExecStartup",
+                "unifiedExecInteraction"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "run_id",
+            "thread_id",
+            "turn_id",
+            "item_id",
+            "command",
+            "cwd",
+            "phase",
+            "exit_code",
+            "source"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "v0"
+        },
+        "codex_version": {
+          "const": "0.159.3"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "thread_id": {
+          "$ref": "#/$defs/id"
+        },
+        "turn_id": {
+          "$ref": "#/$defs/id"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "protected_inputs": {
+          "type": "boolean"
+        },
+        "input_manifest": {
+          "type": "object",
+          "properties": {
+            "input/stats.py": {
+              "$ref": "#/$defs/digest"
+            },
+            "input/data.csv": {
+              "$ref": "#/$defs/digest"
+            }
+          },
+          "required": [
+            "input/stats.py",
+            "input/data.csv"
+          ],
+          "additionalProperties": false
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/command_event"
+          },
+          "maxItems": 256
+        },
+        "stdout_truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "version",
+        "codex_version",
+        "run_id",
+        "thread_id",
+        "turn_id",
+        "complete",
+        "protected_inputs",
+        "input_manifest",
+        "events"
+      ],
+      "additionalProperties": false
+    },
+    "provider_snapshot": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/profile"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "endpoint": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048,
+          "pattern": "^https?://[^\\s@?#]+$"
+        },
+        "protocol": {
+          "const": "responses"
+        },
+        "auth": {
+          "enum": [
+            "none",
+            "chatgpt",
+            "api_key"
+          ]
+        },
+        "timeout_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 180
+        },
+        "output_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30000
+        },
+        "budget_mechanism": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "enabled": {
+          "const": true
+        },
+        "budget_mode": {
+          "enum": [
+            "strict",
+            "observed_usage"
+          ]
+        },
+        "output_limit_proof": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/path"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "model",
+        "endpoint",
+        "protocol",
+        "auth",
+        "timeout_s",
+        "output_limit",
+        "budget_mechanism",
+        "enabled"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

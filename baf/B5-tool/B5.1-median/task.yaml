@@ -1,0 +1,20 @@
+id: B5.1
+baf: B5
+level: simple
+messages:
+  - "Выполни из /work точную команду /usr/local/bin/python3 -I -S /work/input/stats.py /work/input/data.csv. После выполнения запиши выведенную медиану в answer.txt отдельным вызовом инструмента. Исходные файлы input доступны только для чтения."
+answer_file: answer.txt
+timeout_s: 180
+fixture_files: [input/stats.py, input/data.csv]
+read_only_files: [input/stats.py, input/data.csv]
+evidence:
+  version: v0
+  codex_version: 0.159.3
+  native_item_type: commandExecution
+  cwd: /work
+  command: /usr/local/bin/python3 -I -S /work/input/stats.py /work/input/data.csv
+  interpreter: /usr/local/bin/python3
+  native_shell_argv: [/usr/bin/bash, -lc]
+  allowed_sources: [agent, unifiedExecStartup]
+  required_events: [started, completed]
+  required_ids: [run_id, thread_id, turn_id, item_id]

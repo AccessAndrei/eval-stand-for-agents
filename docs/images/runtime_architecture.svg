@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1880" height="1344" viewBox="0 0 1880 1344"><defs>
+<marker id="2367C9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2367C9"/></marker>
+<marker id="2367C9-start" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2367C9"/></marker>
+<marker id="7851B2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7851B2"/></marker>
+<marker id="7851B2-start" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7851B2"/></marker>
+<marker id="18816B" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#18816B"/></marker>
+<marker id="18816B-start" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#18816B"/></marker>
+<marker id="8895A7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#8895A7"/></marker>
+<marker id="8895A7-start" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#8895A7"/></marker>
+</defs>
+<rect x="0" y="0" width="1880" height="1344" rx="0" fill="#F4F7FB" stroke="none" stroke-width="1.6" />
+<text x="26" y="48" font-family="Arial, Helvetica, sans-serif" font-size="33" font-weight="700" fill="#17263C" text-anchor="start">eval-stand-for-agents · task and tool execution flow</text>
+<text x="27" y="81" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" fill="#50627B" text-anchor="start">Version 4 · draft for review. Target architecture for the current iteration; component readiness is not shown.</text>
+<path d="M 30 111 H 65" fill="none" stroke="#2367C9" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#2367C9)" />
+<text x="77" y="117" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">task and model responses</text>
+<path d="M 352 111 H 387" fill="none" stroke="#7851B2" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#7851B2)" />
+<text x="399" y="117" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">tool calls and results</text>
+<path d="M 770 111 H 805" fill="none" stroke="#18816B" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#18816B)" />
+<text x="817" y="117" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">lifecycle and file transfer</text>
+<path d="M 1210 111 H 1245" fill="none" stroke="#8895A7" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="7 6" marker-end="url(#8895A7)" />
+<text x="1257" y="117" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">future iteration</text>
+<rect x="24" y="144" width="1510" height="1175" rx="24" fill="#FFFFFF" stroke="#AABAD0" stroke-width="1.6" />
+<text x="47" y="181" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#17263C" text-anchor="start">ONE PHYSICAL MACHINE · MAC</text>
+<rect x="48" y="206" width="286" height="1080" rx="18" fill="#F8FAFD" stroke="#D6DFEB" stroke-width="1.6" />
+<text x="68" y="240" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#17263C" text-anchor="start">macOS</text>
+<text x="68" y="267" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">User applications</text>
+<rect x="362" y="206" width="1148" height="1080" rx="18" fill="#EAF1FB" stroke="#A9BCD8" stroke-width="1.6" />
+<text x="383" y="239" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#17263C" text-anchor="start">Docker Desktop</text>
+<rect x="380" y="256" width="1112" height="1012" rx="16" fill="#F5F8FE" stroke="#BCCCE2" stroke-width="1.6" />
+<text x="401" y="285" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="600" fill="#17263C" text-anchor="start">Docker-managed Linux VM · shared Linux kernel</text>
+<rect x="396" y="307" width="1078" height="650" rx="16" fill="#FFFFFF" stroke="#B4C6DE" stroke-width="1.6" />
+<text x="416" y="334" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600" fill="#50627B" text-anchor="start">Docker Compose</text>
+<rect x="70" y="425" width="242" height="160" rx="16" fill="#EAF3FF" stroke="#A8C5EF" stroke-width="1.6" />
+<text x="88" y="455" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#17263C" text-anchor="start">Task runner</text>
+<text x="88" y="482" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="600" fill="#50627B" text-anchor="start">Command-line entry</text>
+<text x="88" y="513" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#50627B" text-anchor="start">5 tasks, run sequentially</text>
+<text x="88" y="538" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#50627B" text-anchor="start">Loads task input files</text>
+<text x="88" y="563" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#50627B" text-anchor="start">Submits each task</text>
+<rect x="70" y="740" width="242" height="150" rx="16" fill="#FFFFFF" stroke="#CBD6E4" stroke-width="1.6" />
+<text x="88" y="770" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#17263C" text-anchor="start">Checker</text>
+<text x="88" y="828" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#50627B" text-anchor="start">Validates collected files</text>
+<text x="88" y="853" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#50627B" text-anchor="start">Runs outside the sandbox</text>
+<rect x="70" y="990" width="242" height="83" rx="16" fill="#E9F6EF" stroke="#A7D5BE" stroke-width="1.6" />
+<text x="88" y="1021" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#17263C" text-anchor="start">Results</text>
+<text x="88" y="1049" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Scores · files · traces</text>
+<rect x="70" y="1158" width="242" height="110" rx="16" fill="#F7F8FA" stroke="#8895A7" stroke-width="1.6" stroke-dasharray="7 6"/>
+<text x="88" y="1190" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#17263C" text-anchor="start">Desktop client</text>
+<text x="88" y="1218" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Later: chat and folder</text>
+<text x="88" y="1242" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">selection for agent tasks</text>
+<rect x="418" y="425" width="224" height="144" rx="16" fill="#EAF3FF" stroke="#A8C5EF" stroke-width="1.6" />
+<text x="436" y="455" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#17263C" text-anchor="start">Gateway</text>
+<text x="436" y="513" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#50627B" text-anchor="start">Accepts a run request</text>
+<text x="436" y="538" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#50627B" text-anchor="start">Coordinates the run</text>
+<rect x="690" y="365" width="430" height="335" rx="16" fill="#EFF0FE" stroke="#BDBBE8" stroke-width="1.6" />
+<text x="710" y="398" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#17263C" text-anchor="start">Harness</text>
+<rect x="710" y="445" width="270" height="95" rx="12" fill="#FFFFFF" stroke="#BDBBE8" stroke-width="1.6" />
+<text x="728" y="477" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#17263C" text-anchor="start">codex app-server</text>
+<text x="728" y="504" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Handles model tool calls</text>
+<text x="728" y="527" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Builds executor requests</text>
+<rect x="710" y="615" width="270" height="65" rx="12" fill="#FFFFFF" stroke="#BDBBE8" stroke-width="1.6" />
+<text x="728" y="644" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#17263C" text-anchor="start">Relay</text>
+<text x="728" y="668" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Forwards the stream unchanged</text>
+<rect x="1180" y="445" width="280" height="125" rx="16" fill="#EAF3FF" stroke="#A8C5EF" stroke-width="1.6" />
+<text x="1198" y="475" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#17263C" text-anchor="start">LLM Proxy</text>
+<text x="1198" y="533" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#50627B" text-anchor="start">Forwards model requests</text>
+<text x="1198" y="558" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#50627B" text-anchor="start">Streams model responses</text>
+<rect x="690" y="765" width="770" height="175" rx="16" fill="#EAF7F2" stroke="#A8D5C8" stroke-width="1.6" />
+<text x="710" y="797" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#17263C" text-anchor="start">Sandbox Manager</text>
+<rect x="710" y="815" width="270" height="103" rx="12" fill="#FFFFFF" stroke="#A8D5C8" stroke-width="1.6" />
+<text x="728" y="844" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#17263C" text-anchor="start">Lifecycle</text>
+<text x="728" y="872" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Create · populate /work</text>
+<text x="728" y="896" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Collect files · remove</text>
+<rect x="1080" y="815" width="360" height="103" rx="12" fill="#FFFFFF" stroke="#C2B6DF" stroke-width="1.6" />
+<text x="1098" y="844" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#17263C" text-anchor="start">Executor channel</text>
+<text x="1098" y="872" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Checks access; selects sandbox</text>
+<text x="1098" y="896" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Bridges streams; logs stderr</text>
+<rect x="418" y="1100" width="224" height="130" rx="16" fill="#EDF2F8" stroke="#BCCBDC" stroke-width="1.6" />
+<text x="436" y="1134" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#17263C" text-anchor="start">Docker Engine</text>
+<text x="436" y="1165" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Creates containers</text>
+<text x="436" y="1189" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Applies resource limits</text>
+<text x="436" y="1213" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Removes containers</text>
+<rect x="690" y="1050" width="770" height="195" rx="16" fill="#FFF8E9" stroke="#DFC890" stroke-width="1.6" />
+<text x="1050" y="1082" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#17263C" text-anchor="middle">Sandbox · per-run container</text>
+<rect x="710" y="1110" width="280" height="115" rx="12" fill="#FFFFFF" stroke="#E1D3B3" stroke-width="1.6" />
+<text x="728" y="1141" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#17263C" text-anchor="start">/work</text>
+<text x="728" y="1169" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Temporary directory · tmpfs</text>
+<text x="728" y="1192" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Copies of task input files</text>
+<text x="728" y="1215" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Agent-generated output files</text>
+<rect x="1080" y="1110" width="360" height="115" rx="12" fill="#FFFFFF" stroke="#E1D3B3" stroke-width="1.6" />
+<text x="1098" y="1141" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#17263C" text-anchor="start">codex exec-server</text>
+<text x="1098" y="1169" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Codex tool execution interface</text>
+<text x="1098" y="1192" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Runs commands</text>
+<text x="1098" y="1215" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" fill="#50627B" text-anchor="start">Reads and writes files</text>
+<rect x="1580" y="445" width="274" height="195" rx="18" fill="#EAF3FF" stroke="#A8C5EF" stroke-width="1.6" />
+<text x="1600" y="478" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#17263C" text-anchor="start">OpenAI-compatible</text>
+<text x="1600" y="506" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#17263C" text-anchor="start">model endpoint</text>
+<text x="1600" y="541" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600" fill="#50627B" text-anchor="start">Responses API</text>
+<text x="1600" y="575" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#50627B" text-anchor="start">Luna · current</text>
+<text x="1600" y="603" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" fill="#50627B" text-anchor="start">DeepSeek · future</text>
+<path d="M 312 495 H 418" fill="none" stroke="#2367C9" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#2367C9)" marker-start="url(#2367C9-start)"/>
+<rect x="325" y="455" width="52" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="332" y="473" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#2367C9" text-anchor="start">HTTP</text>
+<text x="69" y="611" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="600" fill="#2367C9" text-anchor="start">Entry: 127.0.0.1:8080</text>
+<path d="M 642 495 H 710" fill="none" stroke="#2367C9" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#2367C9)" marker-start="url(#2367C9-start)"/>
+<rect x="640" y="455" width="52" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="647" y="473" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#2367C9" text-anchor="start">task</text>
+<path d="M 980 495 H 1180" fill="none" stroke="#2367C9" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#2367C9)" marker-start="url(#2367C9-start)"/>
+<rect x="994" y="455" width="179.5" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="1001" y="473" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#2367C9" text-anchor="start">request / tool call</text>
+<path d="M 1460 495 H 1580" fill="none" stroke="#2367C9" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#2367C9)" marker-start="url(#2367C9-start)"/>
+<rect x="1482" y="455" width="60.5" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="1489" y="473" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#2367C9" text-anchor="start">HTTPS</text>
+<path d="M 845 540 V 615" fill="none" stroke="#7851B2" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#7851B2)" marker-start="url(#7851B2-start)"/>
+<rect x="857" y="563" width="137" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="864" y="581" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#7851B2" text-anchor="start">stdin / stdout</text>
+<path d="M 980 648 H 1260 V 815" fill="none" stroke="#7851B2" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#7851B2)" marker-start="url(#7851B2-start)"/>
+<rect x="1003" y="609" width="264.5" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="1010" y="627" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#7851B2" text-anchor="start">HTTP CONNECT · network tunnel</text>
+<path d="M 1260 918 V 1110" fill="none" stroke="#7851B2" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#7851B2)" marker-start="url(#7851B2-start)"/>
+<rect x="1269" y="979" width="111.5" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="1276" y="997" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#7851B2" text-anchor="start">Docker exec</text>
+<rect x="1269" y="1005" width="137" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="1276" y="1023" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#7851B2" text-anchor="start">stdin / stdout</text>
+<path d="M 1080 1165 H 990" fill="none" stroke="#7851B2" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#7851B2)" marker-start="url(#7851B2-start)"/>
+<rect x="992" y="1128" width="60.5" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="999" y="1146" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#7851B2" text-anchor="start">files</text>
+<path d="M 530 569 V 865 H 710" fill="none" stroke="#18816B" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#18816B)" marker-start="url(#18816B-start)"/>
+<rect x="539" y="685" width="137" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="546" y="703" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#18816B" text-anchor="start">create sandbox</text>
+<rect x="539" y="714" width="137" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="546" y="732" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#18816B" text-anchor="start">transfer files</text>
+<rect x="539" y="743" width="137" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="546" y="761" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#18816B" text-anchor="start">collect output</text>
+<rect x="539" y="772" width="86" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="546" y="790" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#18816B" text-anchor="start">clean up</text>
+<path d="M 845 918 V 1110" fill="none" stroke="#18816B" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#18816B)" marker-start="url(#18816B-start)"/>
+<rect x="857" y="972" width="213.5" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="864" y="990" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#18816B" text-anchor="start">before: copy task files</text>
+<rect x="857" y="998" width="196.5" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="864" y="1016" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#18816B" text-anchor="start">after: collect output</text>
+<path d="M 710 890 H 666 V 1150 H 642" fill="none" stroke="#18816B" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#18816B)" />
+<rect x="431" y="1018" width="179.5" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="438" y="1036" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#18816B" text-anchor="start">Docker API / socket</text>
+<path d="M 642 1200 H 690" fill="none" stroke="#18816B" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#18816B)" />
+<path d="M 191 585 V 740" fill="none" stroke="#18816B" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#18816B)" />
+<rect x="71" y="640" width="256" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="78" y="658" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#18816B" text-anchor="start">after collection and cleanup</text>
+<path d="M 191 890 V 990" fill="none" stroke="#18816B" stroke-width="2.5" stroke-linejoin="round"  marker-end="url(#18816B)" />
+<path d="M 312 1185 H 346 V 349 H 530 V 425" fill="none" stroke="#8895A7" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="7 6" marker-end="url(#8895A7)" />
+<path d="M 312 1241 H 346 V 1300 H 845 V 1245" fill="none" stroke="#8895A7" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="7 6" marker-end="url(#8895A7)" />
+<rect x="391" y="1277" width="315.5" height="25" rx="5" fill="#FFFFFF" stroke="none" stroke-width="1.6" />
+<text x="398" y="1295" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#8895A7" text-anchor="start">later: mount client folder at /work</text>
+</svg>

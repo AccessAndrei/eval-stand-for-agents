@@ -1,0 +1,50 @@
+# После подготовки образов mock-сервисы не имеют внешнего маршрута.
+services:
+  llm-proxy:
+    depends_on:
+      mock-provider: {condition: service_healthy}
+      mock-provider-alt: {condition: service_healthy}
+
+  mock-provider: &mock-provider
+    platform: ${DOCKER_PLATFORM:-linux/arm64}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.services
+      target: mock-provider
+      args:
+        SERVICE_UID: ${LOCAL_UID:-1000}
+        SERVICE_GID: ${LOCAL_GID:-1000}
+    init: true
+    restart: "no"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [control]
+    environment:
+      MOCK_SCRIPT_PATH: ${MOCK_SCRIPT_PATH:-}
+    volumes:
+      - type: bind
+        source: ./tests/infra/mock-scripts
+        target: /mock-scripts
+        read_only: true
+        bind: {create_host_path: false}
+    cpus: 0.05
+    mem_limit: 64000000
+    memswap_limit: 64000000
+    pids_limit: 32
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=4000000,mode=1777"]
+    logging:
+      driver: local
+      options: {max-size: "1m", max-file: "2"}
+    healthcheck:
+      test: [CMD, python, /app/scripts/healthcheck.py, "http://127.0.0.1:8090/budget-capabilities", --budget-capabilities]
+      interval: 20s
+      timeout: 20s
+      retries: 6
+      start_period: 45s
+
+  mock-provider-alt:
+    <<: *mock-provider
+
+networks:
+  proxy-egress: {internal: true}

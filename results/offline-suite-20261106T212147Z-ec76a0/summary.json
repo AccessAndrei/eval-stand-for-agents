@@ -1,0 +1,553 @@
+{
+  "version": "v0",
+  "suite": "checkpoint1-offline",
+  "passed": true,
+  "error": null,
+  "steps": [
+    {
+      "name": "existing-stack",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/00-existing-stack.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "builder-state",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/01-builder-state.log",
+      "passed": true,
+      "required": false
+    },
+    {
+      "name": "preflight",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/02-preflight.log",
+      "passed": true,
+      "required": true,
+      "evidence": ""
+    },
+    {
+      "name": "images",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/03-images.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-0",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/04-image-0.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-1",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/05-image-1.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-2",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/06-image-2.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-3",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/07-image-3.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-4",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/08-image-4.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-5",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/09-image-5.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-6",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/10-image-6.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "image-7",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/11-image-7.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "unit-http",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/12-unit-http.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "up",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/13-up.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "select-route-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/14-select-route-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "route",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/15-route.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T212359Z-6f53c0"
+    },
+    {
+      "name": "select-route-mock-alt",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/16-select-route-mock-alt.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "route-alt",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/17-route-alt.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T212452Z-e85320"
+    },
+    {
+      "name": "select-cancel-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/18-select-cancel-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "cancel",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/19-cancel.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T212546Z-cf12d4"
+    },
+    {
+      "name": "select-route-mock-alt",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/20-select-route-mock-alt.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "after-cancel",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/21-after-cancel.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T212643Z-22ef9b"
+    },
+    {
+      "name": "select-executor-failure-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/22-select-executor-failure-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "executor-failure",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/23-executor-failure.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T212735Z-4a7dba"
+    },
+    {
+      "name": "select-route-mock-alt",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/24-select-route-mock-alt.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "after-executor",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/25-after-executor.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T212827Z-7797cc"
+    },
+    {
+      "name": "select-budget-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/26-select-budget-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "budget",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/27-budget.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T212923Z-58592a"
+    },
+    {
+      "name": "select-route-mock-alt",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/28-select-route-mock-alt.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "after-budget",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/29-after-budget.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T213029Z-0d08e9"
+    },
+    {
+      "name": "select-proxy-failure-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/30-select-proxy-failure-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "proxy-failure",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/31-proxy-failure.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T213125Z-851f50"
+    },
+    {
+      "name": "select-route-mock-alt",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/32-select-route-mock-alt.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "after-proxy",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/33-after-proxy.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T213304Z-c69e05"
+    },
+    {
+      "name": "select-recovery-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/34-select-recovery-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "manager-recovery",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/35-manager-recovery.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T213400Z-ac9ff1"
+    },
+    {
+      "name": "select-recovery-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/36-select-recovery-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "harness-recovery",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/37-harness-recovery.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T213541Z-0ba7ff"
+    },
+    {
+      "name": "select-b5-mock",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/38-select-b5-mock.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "b5",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/39-b5.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-20261106T213719Z-98b358"
+    },
+    {
+      "name": "collector-writer",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/40-collector-writer.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-collector-writer-20261106T213724Z-e1993f"
+    },
+    {
+      "name": "collector-interference",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/41-collector-interference.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-collector-interference-20261106T213727Z-13df20"
+    },
+    {
+      "name": "collector-link-swap",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/42-collector-link-swap.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-collector-link-swap-20261106T213730Z-97e80e"
+    },
+    {
+      "name": "collector-symlink",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/43-collector-symlink.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-collector-symlink-20261106T213733Z-e075d0"
+    },
+    {
+      "name": "collector-size-limit",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/44-collector-size-limit.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-collector-size-limit-20261106T213736Z-d367a2"
+    },
+    {
+      "name": "make-down",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/45-make-down.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-shutdown-make-353971a3.json"
+    },
+    {
+      "name": "up",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/46-up.log",
+      "passed": true,
+      "required": true
+    },
+    {
+      "name": "compose-down",
+      "returncode": 0,
+      "log": "results/offline-suite-20261106T212147Z-ec76a0/47-compose-down.log",
+      "passed": true,
+      "required": true,
+      "evidence": "results/native-shutdown-compose-8659b152.json"
+    }
+  ],
+  "coverage": {
+    "unit_http": [
+      "contracts",
+      "checkers",
+      "storage reservations and crash",
+      "lost provision/result responses",
+      "stream interruption and held usage",
+      "live events before terminal",
+      "PID ownership and escalation"
+    ],
+    "native_planned": [
+      "route",
+      "route-alt",
+      "cancel",
+      "after-cancel",
+      "executor-failure",
+      "after-executor",
+      "budget",
+      "after-budget",
+      "proxy-failure",
+      "after-proxy",
+      "manager-recovery",
+      "harness-recovery",
+      "b5",
+      "collector-writer",
+      "collector-interference",
+      "collector-link-swap",
+      "collector-symlink",
+      "collector-size-limit",
+      "make-down",
+      "compose-down"
+    ],
+    "native_executed": [
+      "route",
+      "route-alt",
+      "cancel",
+      "after-cancel",
+      "executor-failure",
+      "after-executor",
+      "budget",
+      "after-budget",
+      "proxy-failure",
+      "after-proxy",
+      "manager-recovery",
+      "harness-recovery",
+      "b5",
+      "collector-writer",
+      "collector-interference",
+      "collector-link-swap",
+      "collector-symlink",
+      "collector-size-limit",
+      "make-down",
+      "compose-down"
+    ],
+    "native_not_run": []
+  },
+  "no_live_model_calls": true,
+  "no_image_download_or_build": true,
+  "resource_postcheck": {
+    "description": "Supplemental read-only postcheck. Mid-sample was captured during this suite, not before its start. Docker categories may overlap; values are not blindly summed. Workspace totals are logical regular-file sizes, excluding .auth and symlinks.",
+    "mid_suite": {
+      "sampled_at": "2026-11-06T21:28:04.151403+00:00",
+      "phase": "mid_suite_not_pre_run",
+      "docker_system_df": [
+        {
+          "Active": "8",
+          "Reclaimable": "3.713GB (67%)",
+          "Size": "5.504GB",
+          "TotalCount": "64",
+          "Type": "Images"
+        },
+        {
+          "Active": "6",
+          "Reclaimable": "42B (100%)",
+          "Size": "42B",
+          "TotalCount": "8",
+          "Type": "Containers"
+        },
+        {
+          "Active": "5",
+          "Reclaimable": "0B (0%)",
+          "Size": "3.644GB",
+          "TotalCount": "5",
+          "Type": "Local Volumes"
+        },
+        {
+          "Active": "0",
+          "Reclaimable": "10.1GB",
+          "Size": "10.5GB",
+          "TotalCount": "221",
+          "Type": "Build Cache"
+        }
+      ],
+      "core_limits": [
+        {
+          "service": "gateway",
+          "container_id": "075c1d1417dc",
+          "memory_bytes": 192000000,
+          "memory_swap_bytes": 192000000,
+          "nano_cpus": 1000000000,
+          "pids_limit": 128,
+          "readonly_root": true,
+          "cap_drop": [
+            "ALL"
+          ]
+        },
+        {
+          "service": "harness",
+          "container_id": "60c264a7ff4f",
+          "memory_bytes": 512000000,
+          "memory_swap_bytes": 512000000,
+          "nano_cpus": 1000000000,
+          "pids_limit": 128,
+          "readonly_root": true,
+          "cap_drop": [
+            "ALL"
+          ]
+        },
+        {
+          "service": "llm-proxy",
+          "container_id": "5cab7315038e",
+          "memory_bytes": 192000000,
+          "memory_swap_bytes": 192000000,
+          "nano_cpus": 1000000000,
+          "pids_limit": 128,
+          "readonly_root": true,
+          "cap_drop": [
+            "ALL"
+          ]
+        },
+        {
+          "service": "sandbox-manager",
+          "container_id": "0e4d416f87ec",
+          "memory_bytes": 192000000,
+          "memory_swap_bytes": 192000000,
+          "nano_cpus": 1000000000,
+          "pids_limit": 128,
+          "readonly_root": true,
+          "cap_drop": [
+            "ALL"
+          ]
+        }
+      ],
+      "workspace_regular_file_bytes_excluding_auth_and_symlinks": 411393021,
+      "workspace_regular_files": 4227,
+      "results_regular_file_bytes": 792329,
+      "results_files": 412
+    },
+    "after_suite": {
+      "sampled_at": "2026-11-06T21:39:42.648837+00:00",
+      "phase": "after_suite_teardown",
+      "docker_system_df": [
+        {
+          "Active": "1",
+          "Reclaimable": "4.097GB (74%)",
+          "Size": "5.504GB",
+          "TotalCount": "64",
+          "Type": "Images"
+        },
+        {
+          "Active": "0",
+          "Reclaimable": "42B (100%)",
+          "Size": "42B",
+          "TotalCount": "1",
+          "Type": "Containers"
+        },
+        {
+          "Active": "1",
+          "Reclaimable": "0B (0%)",
+          "Size": "3.644GB",
+          "TotalCount": "1",
+          "Type": "Local Volumes"
+        },
+        {
+          "Active": "0",
+          "Reclaimable": "10.1GB",
+          "Size": "10.5GB",
+          "TotalCount": "221",
+          "Type": "Build Cache"
+        }
+      ],
+      "compose_containers_remaining": 0,
+      "workspace_regular_file_bytes_excluding_auth_and_symlinks": 414646622,
+      "workspace_regular_files": 4365,
+      "results_regular_file_bytes": 4041606,
+      "results_files": 533
+    }
+  }
+}

@@ -1,3 +1,6 @@
+# Raw evidence is immutable; formatting it would invalidate saved checksums.
+exclude: ^(results|build)/
+
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.3
