@@ -33,7 +33,6 @@ class Runtime:
         proxy: Client,
         project_id: str,
         provenance: dict,
-        auth: Client | None = None,
     ) -> None:
         self.store, self.manager, self.harness, self.proxy = (
             store,
@@ -43,7 +42,6 @@ class Runtime:
         )
         self.project_id = project_id
         self.provenance = provenance
-        self.auth = auth
         self.cancellations: set[str] = set()
 
     def result(self, launch: dict) -> dict:
@@ -84,14 +82,6 @@ class Runtime:
         result["errors"].append({"stage": stage, "code": code, "message": code})
 
     async def prepare_profile(self, name: str) -> None:
-        if name == "luna":
-            if self.auth is None:
-                raise RemoteError(401, "auth_error")
-            reply = await self.auth.request(
-                "POST", "/v0/auth/prepare", {"force_refresh": False}, 95
-            )
-            if reply.get("ready") is not True:
-                raise RemoteError(401, "auth_error")
         await self.proxy.request("GET", "/v0/profiles/" + name)
 
     @staticmethod

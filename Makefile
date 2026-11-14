@@ -1,5 +1,5 @@
 VENV ?= .venv
-PROFILE ?= luna
+PROFILE ?= api
 DOCKER_PLATFORM ?= $(if $(filter arm64 aarch64,$(shell uname -m)),linux/arm64,linux/amd64)
 export DOCKER_DEFAULT_PLATFORM = $(DOCKER_PLATFORM)
 export COMPOSE_PARALLEL_LIMIT = 1
@@ -28,8 +28,8 @@ checkpoint1: preflight-shared
 test-checkpoint1:
 	$(VENV)/bin/python -m pytest -q
 
-test-offline:
-	$(VENV)/bin/python -m tests.infra.offline_suite
+# Совместимое имя; основная команда инфраструктурных проверок — из шаблона.
+test-offline: test-infra
 
 preflight:
 	$(VENV)/bin/python -m scripts.preflight
@@ -52,21 +52,15 @@ down:
 
 test-ci: test-ui test-infra baf-smoke
 
-test-ui:
-	@echo "Десктоп-клиент отложен; UI-тестов пока нет" >&2
-	@exit 2
-
 test-infra:
-	$(VENV)/bin/python -m pytest -q tests/test_contracts.py tests/test_manager.py tests/test_manager_tunnel.py tests/test_proxy.py tests/test_gateway_store.py tests/test_gateway_runtime.py tests/test_storage.py tests/test_harness.py
+	$(VENV)/bin/python -m tests.infra.offline_suite
 
-baf-smoke:
-	@echo "Реальный smoke-БАФ требует подтверждённого Docker-маршрута; компонентные проверки: make test-checkpoint1" >&2
-	@exit 2
-
-baf:
-	@echo "Полный БАФ-бенчмарк ещё не реализован; checkpoint1 не заменяет полный каталог" >&2
-	@exit 2
-
-bench-fs bench-sandbox:
-	@echo "Реальные замеры пока не реализованы" >&2
+# Интерфейс полного задания сохраняется; отложенные функции не дают ложный успех.
+test-ui: UNAVAILABLE = Десктоп-клиент и UI-тесты ещё не реализованы
+baf-smoke: UNAVAILABLE = Smoke по всем восьми БАФ ещё не реализован; checkpoint1 охватывает B1–B5
+baf: UNAVAILABLE = Полный каталог БАФ и сравнение пар ещё не реализованы
+bench-fs: UNAVAILABLE = Замеры файловой системы через клиентское монтирование ещё не реализованы
+bench-sandbox: UNAVAILABLE = Серия замеров cold start, exec и памяти ещё не реализована
+test-ui baf-smoke baf bench-fs bench-sandbox:
+	@echo "$@: $(UNAVAILABLE)" >&2
 	@exit 2

@@ -22,7 +22,6 @@ class Rpc:
         self.on_event = on_event
         self.pending: dict[int, asyncio.Future] = {}
         self.sequence = 0
-        self.task: asyncio.Task | None = None
 
     async def send(self, message: dict) -> None:
         self.writer.write(json.dumps(message, ensure_ascii=False).encode() + b"\n")

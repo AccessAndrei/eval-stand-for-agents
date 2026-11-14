@@ -184,7 +184,6 @@ def main() -> None:
         Client(os.environ["PROXY_URL"], os.environ["PROXY_TOKEN"], project),
         project,
         provenance,
-        auth=Client(os.environ["HARNESS_URL"], os.environ["PROXY_TOKEN"], project),
     )
     web.run_app(
         create_app(runtime, os.environ["CLIENT_TOKEN"]), port=8080, access_log=None

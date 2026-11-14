@@ -45,10 +45,7 @@ async def open_run(
 def test_profile_rejects_usage_without_bound_and_incomplete_configuration() -> None:
     profiles = load_profiles(Path("config/profiles.json"))
     profiles["mock"].compatible()
-    for name, code in (
-        ("luna", "live_authorization_not_ready"),
-        ("deepseek", "profile_incomplete"),
-    ):
+    for name, code in (("api", "profile_incomplete"),):
         with pytest.raises(ProfileError, match=code):
             profiles[name].compatible()
     with pytest.raises(ProfileError, match="unsupported_protocol"):
@@ -194,14 +191,11 @@ def test_auth_preflight_conflict_idempotency_and_budget_before_upstream(
             ) as client:
                 assert (await client.get("/health")).status == 401
                 for name, status in (
-                    ("luna", 401),
-                    ("deepseek", 422),
+                    ("api", 422),
                     ("missing", 422),
                 ):
                     response = await client.get("/v0/profiles/" + name, headers=AUTH)
                     assert response.status == status
-                    if name == "luna":
-                        assert (await response.json())["error"] == "auth_error"
                 first = await open_run(client)
                 assert (await open_run(client))["inference_token"] == first[
                     "inference_token"
@@ -434,10 +428,10 @@ def test_finished_run_rejected_before_auth_or_upstream(
     async def scenario() -> None:
         app = create_app(Path("config/profiles.json"), tmp_path / "state", TOKEN)
         proxy = app[PROXY_KEY]
-        profile = proxy.profiles["luna"]
+        profile = proxy.profiles["api"]
         ledger = Ledger(
             tmp_path / "state" / "finished.json",
-            "luna",
+            "api",
             profile_snapshot=profile.snapshot(),
         )
         if closed:
@@ -455,7 +449,7 @@ def test_finished_run_rejected_before_auth_or_upstream(
             response = await client.post(
                 "/v0/runs/finished/responses",
                 headers={"Authorization": "Bearer " + ledger.data["token"]},
-                json={"model": "gpt-6-luna", "stream": True, "input": []},
+                json={"model": "custom-model", "stream": True, "input": []},
             )
             assert response.status == 429
             assert (await response.json())["error"] == (

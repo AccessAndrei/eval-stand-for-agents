@@ -50,7 +50,7 @@ services:
         source: ${RESULTS_PATH:-./results}
         target: /results
         bind: {create_host_path: false}
-    command: [--profile, luna, --results, /results]
+    command: [--profile, api, --results, /results]
     stop_grace_period: 100s
 
   # Одноразовая проверка собранного образа, не пятый постоянный сервис.

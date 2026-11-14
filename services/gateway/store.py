@@ -121,14 +121,11 @@ class RunStore:
         previous = self.get(run_id)
         if previous["state"] == "terminal":
             return previous
-        state = {**previous, "state": "terminal", "result": result, "updated_at": now()}
         # Восстановление читает result.json даже при аварии до обновления state.
         destination = self.path / run_id / "result.json"
         if not destination.exists():
             self.disk.finalize(
                 self.path / (run_id + "-final.reserve"), destination, result
             )
-        else:
-            state["result"] = json.loads(destination.read_text())
         (self.path / (run_id + ".reserve")).unlink(missing_ok=True)
         return self.get(run_id)

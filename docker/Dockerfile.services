@@ -40,7 +40,7 @@ CMD ["python", "-m", "services.llm_proxy.mock", "--host", "0.0.0.0", "--port", "
 FROM runtime AS runner
 COPY baf /app/baf
 ENTRYPOINT ["python", "-m", "baf.runner"]
-CMD ["--profile", "luna", "--results", "/results"]
+CMD ["--profile", "api", "--results", "/results"]
 
 FROM runtime AS harness
 COPY --from=codex-source /usr/local/bin/codex /usr/local/bin/codex

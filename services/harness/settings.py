@@ -68,10 +68,9 @@ def configure(
         "multi_agent = false",
         "hooks = false",
     ]
-    if model in {"mock-codex", "mock-codex-alt", "gpt-6-luna"}:
-        catalog = home / "models.json"
-        catalog.write_text(json.dumps({"models": [sandbox_model(model)]}))
-        config.insert(0, f"model_catalog_json = {quote(str(catalog))}")
+    catalog = home / "models.json"
+    catalog.write_text(json.dumps({"models": [sandbox_model(model)]}))
+    config.insert(0, f"model_catalog_json = {quote(str(catalog))}")
     (home / "config.toml").write_text("\n".join(config) + "\n")
     for path in home.iterdir():
         path.chmod(0o600)

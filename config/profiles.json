@@ -1,23 +1,35 @@
 {
   "mock": {
-    "model": "mock-codex", "endpoint": "http://mock-provider:8090",
-    "protocol": "responses", "auth": "none", "timeout_s": 30,
-    "output_limit": 2048, "budget_mechanism": "mock-utf8-quarter-v1", "budget_mode": "strict"
+    "model": "mock-codex",
+    "endpoint": "http://mock-provider:8090",
+    "protocol": "responses",
+    "auth": "none",
+    "timeout_s": 30,
+    "output_limit": 2048,
+    "budget_mechanism": "mock-utf8-quarter-v1",
+    "budget_mode": "strict"
   },
   "mock-alt": {
-    "model": "mock-codex-alt", "endpoint": "http://mock-provider-alt:8090",
-    "protocol": "responses", "auth": "none", "timeout_s": 30,
-    "output_limit": 2048, "budget_mechanism": "mock-utf8-quarter-v1", "budget_mode": "strict"
+    "model": "mock-codex-alt",
+    "endpoint": "http://mock-provider-alt:8090",
+    "protocol": "responses",
+    "auth": "none",
+    "timeout_s": 30,
+    "output_limit": 2048,
+    "budget_mechanism": "mock-utf8-quarter-v1",
+    "budget_mode": "strict"
   },
-  "luna": {
-    "model": "gpt-6-luna", "endpoint": "https://chatgpt.com/backend-api/codex",
-    "protocol": "responses", "auth": "chatgpt", "timeout_s": 180,
-    "output_limit": 2048, "budget_mechanism": "observed-usage-v1",
+  "api": {
+    "model": null,
+    "endpoint": null,
+    "model_env": "MODEL_ID",
+    "endpoint_env": "MODEL_ENDPOINT",
+    "api_key_env": "MODEL_API_KEY",
+    "protocol": "responses",
+    "auth": "api_key",
+    "timeout_s": 180,
+    "output_limit": 2048,
+    "budget_mechanism": "observed-usage-v1",
     "budget_mode": "observed_usage"
-  },
-  "deepseek": {
-    "model": null, "endpoint": null, "protocol": "unconfirmed",
-    "auth": "unconfigured", "timeout_s": 180, "output_limit": 2048,
-    "budget_mechanism": null, "enabled": false
   }
 }

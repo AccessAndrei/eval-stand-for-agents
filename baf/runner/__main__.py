@@ -13,7 +13,7 @@ def main() -> int:
         description="Пять последовательных задач первого чекпоинта"
     )
     parser.add_argument(
-        "--profile", choices=("luna", "mock", "mock-alt", "deepseek"), required=True
+        "--profile", required=True, help="Имя настроенного профиля провайдера"
     )
     parser.add_argument("--results", type=Path, default=Path("results"))
     args = parser.parse_args()

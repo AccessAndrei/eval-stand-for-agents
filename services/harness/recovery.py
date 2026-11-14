@@ -22,7 +22,6 @@ from typing import Callable
 from jsonschema import Draft202012Validator
 
 from contracts import schema
-from services.harness.credentials import CredentialError, _atomic, _sync_directory
 from services.harness.settings import VERSION
 
 OWNER_ENV = "EVAL_STAND_ATTEMPT_OWNER"
@@ -32,6 +31,30 @@ _ID = Draft202012Validator(schema("launch")["$defs"]["id"])
 
 class RecoveryError(RuntimeError):
     """Код без argv, окружения и содержимого настроек."""
+
+
+def _sync_directory(path: Path) -> None:
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _atomic(path: Path, raw: bytes) -> None:
+    temporary = path.parent / (".pending-" + secrets.token_hex(16))
+    try:
+        fd = os.open(
+            temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC, 0o600
+        )
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        _sync_directory(path.parent)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 @dataclass(frozen=True)
@@ -192,7 +215,7 @@ class HarnessRecovery:
             raise RecoveryError("recovery_receipt_too_large")
         try:
             _atomic(self._path(record["run_id"]), raw)
-        except CredentialError:
+        except OSError:
             raise RecoveryError("recovery_storage_failed") from None
 
     def _home(self, run_id: str) -> Path:
@@ -220,9 +243,6 @@ class HarnessRecovery:
             }
         )
         return {OWNER_ENV: nonce}
-
-    def register(self, run_id: str) -> dict[str, str]:
-        return self.begin_attempt(run_id)
 
     @staticmethod
     def _interrupted() -> dict:

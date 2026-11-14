@@ -186,7 +186,9 @@ def test_native_output_redaction_and_evidence_independent_of_stdout() -> None:
     )
 
 
-@pytest.mark.parametrize("model", ["mock-codex", "mock-codex-alt", "gpt-6-luna"])
+@pytest.mark.parametrize(
+    "model", ["mock-codex", "mock-codex-alt", "arbitrary-provider-model"]
+)
 def test_catalog_keeps_requested_slug_and_direct_native_tools(
     tmp_path: Path,
     model: str,

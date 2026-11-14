@@ -30,12 +30,10 @@
       ]
     },
     "profile": {
-      "enum": [
-        "luna",
-        "mock",
-        "mock-alt",
-        "deepseek"
-      ]
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
     },
     "file": {
       "type": "object",
@@ -1295,7 +1293,10 @@
           "pattern": "^https?://[^\\s@?#]+$"
         },
         "protocol": {
-          "const": "responses"
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
         },
         "auth": {
           "enum": [
@@ -1332,6 +1333,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/path"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "api_key_env": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
             },
             {
               "type": "null"

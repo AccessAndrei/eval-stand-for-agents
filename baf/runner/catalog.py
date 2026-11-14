@@ -26,7 +26,6 @@ class Task:
     id: str
     directory: Path
     messages: tuple[str, ...]
-    answer_file: str
     timeout_s: int
     fixture_files: tuple[FixtureFile, ...]
     evidence_required: bool = False
@@ -178,11 +177,11 @@ def _load_task(root: Path, entry: dict) -> Task:
         raise CatalogError("Недопустимый timeout_s")
     if not _contained_path(directory, "check.py").is_file():
         raise CatalogError("У задачи отсутствует доверенный check.py")
+    _relative_path(data.get("answer_file"))
     return Task(
         entry["id"],
         directory,
         tuple(messages),
-        _relative_path(data.get("answer_file")),
         timeout,
         _fixture(directory, data),
         _validate_evidence(data, entry["id"]),

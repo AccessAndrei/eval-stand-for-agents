@@ -1,4 +1,4 @@
-"""Разница строгого mock-предела и согласованного observed_usage у Luna."""
+"""Разница строгого mock-предела и observed_usage у API-провайдера."""
 
 from dataclasses import replace
 from pathlib import Path
@@ -10,8 +10,11 @@ from services.llm_proxy.profiles import Profile, ProfileError, load_profiles
 
 
 def observed(tmp_path: Path) -> Ledger:
-    profile = load_profiles(Path("config/profiles.json"))["luna"]
-    return Ledger(tmp_path / "luna.json", "luna", profile_snapshot=profile.snapshot())
+    profile = load_profiles(
+        Path("config/profiles.json"),
+        {"MODEL_ID": "custom-model", "MODEL_ENDPOINT": "https://provider.example/v1"},
+    )["api"]
+    return Ledger(tmp_path / "api.json", "api", profile_snapshot=profile.snapshot())
 
 
 def test_last_observed_request_may_overshoot_without_changing_execution(
@@ -70,7 +73,7 @@ def test_unknown_observed_usage_blocks_after_restart_without_fake_input_bound(
     settled = ledger.reserve_observed()
     ledger.settle(settled, {"input_tokens": 100, "output_tokens": 10})
     pending = ledger.reserve_observed()
-    restarted = Ledger(tmp_path / "luna.json", "luna")
+    restarted = Ledger(tmp_path / "api.json", "api")
     assert restarted.data["reservations"][pending] == [None, 2048]
     tokens = restarted.tokens()
     assert tokens["actual"] is None
@@ -117,49 +120,54 @@ def test_modes_cannot_silently_use_each_others_reservations(tmp_path: Path) -> N
     with pytest.raises(ValueError, match="observed_usage_requires_reserve_observed"):
         live.reserve(100, 2048)
     with pytest.raises(ValueError, match="run_conflict"):
-        Ledger(tmp_path / "luna.json", "luna", mode="strict")
+        Ledger(tmp_path / "api.json", "api", mode="strict")
 
 
 def test_profile_snapshot_retains_mode_and_output_limit_after_reload(
     tmp_path: Path,
 ) -> None:
-    profile = load_profiles(Path("config/profiles.json"))["luna"]
+    profile = load_profiles(
+        Path("config/profiles.json"),
+        {"MODEL_ID": "custom-model", "MODEL_ENDPOINT": "https://provider.example/v1"},
+    )["api"]
     snapshot = profile.snapshot()
-    ledger = Ledger(tmp_path / "luna.json", "luna", profile_snapshot=snapshot)
+    ledger = Ledger(tmp_path / "api.json", "api", profile_snapshot=snapshot)
     snapshot["budget_mode"] = "strict"
     snapshot["output_limit"] = 1
-    restarted = Ledger(tmp_path / "luna.json", "luna", profile_snapshot=snapshot)
+    restarted = Ledger(tmp_path / "api.json", "api", profile_snapshot=snapshot)
     assert restarted.data["profile_snapshot"] == ledger.data["profile_snapshot"]
     assert restarted.tokens()["mode"] == "observed_usage"
     assert restarted.tokens()["output_limit"] == 2048
 
 
-def test_luna_requires_explicit_runtime_auth_readiness_and_fixed_route() -> None:
-    profile = load_profiles(Path("config/profiles.json"))["luna"]
-    with pytest.raises(ProfileError, match="live_authorization_not_ready"):
-        profile.compatible()
-    profile.compatible(live_ready=True)
-    assert profile.public()["live_authorization_required"] is True
-    assert profile.public()["budget_mode"] == "observed_usage"
+def test_api_profile_accepts_arbitrary_model_endpoint_and_output_limit() -> None:
+    profile = load_profiles(
+        Path("config/profiles.json"),
+        {"MODEL_ID": "custom-model", "MODEL_ENDPOINT": "https://provider.example/v1"},
+    )["api"]
+    profile.compatible()
     for change in (
         {"model": "different"},
-        {"auth": "api_key"},
-        {"endpoint": "https://api.openai.com/v1"},
-        {"budget_mode": "strict"},
+        {"endpoint": "https://other.example/v2"},
         {"output_limit": 8192},
     ):
+        replace(profile, **change).compatible()
+    for change in ({"auth": "chatgpt"}, {"budget_mode": "strict"}):
         with pytest.raises(ProfileError):
-            replace(profile, **change).compatible(live_ready=True)
+            replace(profile, **change).compatible()
 
 
 def test_old_profile_snapshot_remains_readable_without_report_dependency(
     tmp_path: Path,
 ) -> None:
-    profile = load_profiles(Path("config/profiles.json"))["luna"]
+    profile = load_profiles(
+        Path("config/profiles.json"),
+        {"MODEL_ID": "custom-model", "MODEL_ENDPOINT": "https://provider.example/v1"},
+    )["api"]
     snapshot = {**profile.snapshot(), "output_limit_proof": "results/old/report.json"}
-    ledger = Ledger(tmp_path / "old.json", "luna", profile_snapshot=snapshot)
+    ledger = Ledger(tmp_path / "old.json", "api", profile_snapshot=snapshot)
     restored = Profile(**ledger.data["profile_snapshot"])
-    restored.compatible(live_ready=True)
+    restored.compatible()
     assert ledger.data["profile_snapshot"] == snapshot
     assert "output_limit_proof" not in restored.public()
     assert "output_limit_proof" not in restored.snapshot()

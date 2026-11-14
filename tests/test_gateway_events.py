@@ -174,7 +174,7 @@ def test_busy_rejection_precedes_auth_and_preserves_identical_replay(
                 used = runtime.store.disk.used()
                 rejected = await client.post(
                     "/v0/runs",
-                    json={**launch, "run_id": "new-run", "provider_profile": "luna"},
+                    json={**launch, "run_id": "new-run", "provider_profile": "api"},
                     headers=AUTH,
                 )
                 assert rejected.status == 409

@@ -105,7 +105,7 @@ def test_reject_unsafe_paths(launch: dict, path: str) -> None:
     "field,value",
     [
         ("version", "v1"),
-        ("provider_profile", "unknown"),
+        ("provider_profile", "bad/profile"),
         ("run_id", "../run"),
         ("timeout_s", 0),
         ("timeout_s", True),
@@ -334,10 +334,13 @@ def test_evidence_binds_native_events_and_keeps_stdout_independent() -> None:
 
 
 def observed_result(result: dict) -> dict:
-    profile = load_profiles(Path("config/profiles.json"))["luna"]
+    profile = load_profiles(
+        Path("config/profiles.json"),
+        {"MODEL_ID": "custom-model", "MODEL_ENDPOINT": "https://provider.example/v1"},
+    )["api"]
     result.update(
-        provider_profile="luna",
-        model="gpt-6-luna",
+        provider_profile="api",
+        model="custom-model",
         provider_snapshot=profile.snapshot(),
     )
     result["tokens"].update(
@@ -358,7 +361,7 @@ def test_observed_overshoot_is_reported_without_forcing_failed_execution(
     validate("result", result)
     assert result["execution_status"] == "success"
     report = make_report(result)
-    report["provider_profile"] = "luna"
+    report["provider_profile"] = "api"
     validate("report", report)
     assert report["success"] is True
 

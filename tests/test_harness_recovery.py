@@ -117,7 +117,7 @@ def test_no_processes_after_container_restart_proves_cleanup(
 ) -> None:
     owner, _, signals = recovery
     home = configured_home(owner.state, "run-1")
-    owner.register("run-1")
+    owner.begin_attempt("run-1")
     result = asyncio.run(owner.reconcile())["run-1"]
     assert result["done"] and result["released"]
     assert result["execution_status"] == "interrupted"
@@ -134,7 +134,7 @@ def test_app_server_relay_and_owned_session_descendants_are_stopped(
 ) -> None:
     owner, proc, signals = recovery
     home = configured_home(owner.state, "run-1")
-    nonce = owner.register("run-1")[OWNER_ENV]
+    nonce = owner.begin_attempt("run-1")[OWNER_ENV]
     process(proc, 500001, 500001, home, nonce)
     process(proc, 500002, 500001, home, nonce, program="/trusted/python")
     process(proc, 500003, 500001, home, nonce, program="/other/owned-child")
@@ -150,7 +150,7 @@ def test_orphan_relay_with_separate_group_is_still_owned(
 ) -> None:
     owner, proc, signals = recovery
     home = configured_home(owner.state, "run-1")
-    nonce = owner.register("run-1")[OWNER_ENV]
+    nonce = owner.begin_attempt("run-1")[OWNER_ENV]
     process(proc, 500002, 500001, home, nonce, program="/trusted/python")
     assert asyncio.run(owner.reconcile())["run-1"]["released"]
     assert signals == [(500002, signal.SIGTERM)]
@@ -165,7 +165,7 @@ def test_unconfirmed_ownership_preserves_processes_and_home(
 ) -> None:
     owner, proc, signals = recovery
     home = configured_home(owner.state, "run-1")
-    nonce = owner.register("run-1")[OWNER_ENV]
+    nonce = owner.begin_attempt("run-1")[OWNER_ENV]
     process(
         proc,
         500001,
@@ -197,7 +197,7 @@ def test_pid_reuse_between_scan_and_signal_never_signals_new_process(
 ) -> None:
     owner, proc, signals = recovery
     home = configured_home(owner.state, "run-1")
-    nonce = owner.register("run-1")[OWNER_ENV]
+    nonce = owner.begin_attempt("run-1")[OWNER_ENV]
     process(proc, 500001, 500001, home, nonce)
     before = owner._process(500001, home, nonce)
     shutil.rmtree(proc / "500001")
@@ -212,7 +212,7 @@ def test_ignored_first_signal_escalates_within_deadline(
 ) -> None:
     owner, proc, signals = recovery
     home = configured_home(owner.state, "run-1")
-    nonce = owner.register("run-1")[OWNER_ENV]
+    nonce = owner.begin_attempt("run-1")[OWNER_ENV]
     process(proc, 500001, 500001, home, nonce)
 
     def ignore_term(identity: ProcessIdentity, number: int) -> None:
@@ -231,7 +231,7 @@ def test_unstoppable_process_blocks_next_run_boundedly(
 ) -> None:
     owner, proc, _ = recovery
     home = configured_home(owner.state, "run-1")
-    nonce = owner.register("run-1")[OWNER_ENV]
+    nonce = owner.begin_attempt("run-1")[OWNER_ENV]
     process(proc, 500001, 500001, home, nonce)
     owner.send_signal = lambda identity, number: None
     started = time.monotonic()
@@ -260,7 +260,7 @@ def test_normal_completion_receipt_preserves_native_evidence(
 ) -> None:
     owner, _, _ = recovery
     home = configured_home(owner.state, "run-1")
-    owner.register("run-1")
+    owner.begin_attempt("run-1")
     result = asyncio.run(owner.complete("run-1", native_snapshot()))
     assert result["released"] and result["done"]
     assert result["execution_status"] == "success"
@@ -276,7 +276,7 @@ def test_crash_after_home_deletion_does_not_lose_native_result(
 ) -> None:
     owner, _, _ = recovery
     home = configured_home(owner.state, "run-1")
-    owner.register("run-1")
+    owner.begin_attempt("run-1")
     original = owner._write
 
     def crash_on_final(record: dict) -> None:
@@ -315,7 +315,7 @@ def test_home_symlink_never_deletes_foreign_directory(
 ) -> None:
     owner, _, _ = recovery
     home = configured_home(owner.state, "run-1")
-    owner.register("run-1")
+    owner.begin_attempt("run-1")
     shutil.rmtree(home)
     foreign = tmp_path / "foreign"
     foreign.mkdir()
@@ -330,7 +330,7 @@ def test_snapshot_bounds_mark_evidence_and_trace_truncation(
 ) -> None:
     owner, _, _ = recovery
     configured_home(owner.state, "run-1")
-    owner.register("run-1")
+    owner.begin_attempt("run-1")
     snapshot = native_snapshot()
     snapshot["events"] = [{"value": "x" * 200_000}] * 6
     snapshot["traces"] = [{"output": "x" * 200_000}] * 6
@@ -346,7 +346,7 @@ def test_compact_startup_keeps_full_evidence_only_in_receipt(
 ) -> None:
     owner, _, _ = recovery
     configured_home(owner.state, "run-1")
-    owner.register("run-1")
+    owner.begin_attempt("run-1")
     asyncio.run(owner.complete("run-1", native_snapshot()))
     controls = asyncio.run(owner.reconcile(controls_only=True))["run-1"]
     assert set(controls) == {"done", "released", "execution_status", "cleanup_error"}
@@ -356,7 +356,7 @@ def test_compact_startup_keeps_full_evidence_only_in_receipt(
 def test_foreign_uid_environment_is_not_read(recovery: RecoveryFixture) -> None:
     owner, proc, signals = recovery
     home = configured_home(owner.state, "run-1")
-    owner.register("run-1")
+    owner.begin_attempt("run-1")
     process(proc, 500001, 500001, home, "other", uid=os.getuid() + 1)
     (proc / "500001/environ").unlink()
     assert asyncio.run(owner.reconcile())["run-1"]["released"]
@@ -372,7 +372,7 @@ def test_unreadable_own_process_marker_cannot_prove_absence(
 
     owner, proc, signals = recovery
     home = configured_home(owner.state, "run-1")
-    nonce = owner.register("run-1")[OWNER_ENV]
+    nonce = owner.begin_attempt("run-1")[OWNER_ENV]
     process(proc, 500001, 500001, home, nonce)
 
     def denied(*args: object) -> None:
@@ -390,7 +390,7 @@ def test_initial_receipt_write_failure_still_stops_processes_and_retains_home(
 ) -> None:
     owner, proc, signals = recovery
     home = configured_home(owner.state, "run-1")
-    nonce = owner.register("run-1")[OWNER_ENV]
+    nonce = owner.begin_attempt("run-1")[OWNER_ENV]
     process(proc, 500001, 500001, home, nonce)
 
     def disk_full(record: dict) -> None:
@@ -414,7 +414,7 @@ def test_owned_version_probe_is_a_trusted_separate_session(
 ) -> None:
     owner, proc, signals = recovery
     home = configured_home(owner.state, "run-1")
-    nonce = owner.register("run-1")[OWNER_ENV]
+    nonce = owner.begin_attempt("run-1")[OWNER_ENV]
     process(proc, 500001, 500001, home, nonce, arguments=("--version",))
     assert asyncio.run(owner.reconcile())["run-1"]["released"]
     assert signals == [(500001, signal.SIGTERM)]

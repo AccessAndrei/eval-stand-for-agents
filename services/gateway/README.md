@@ -4,6 +4,8 @@
 [runtime.py](runtime.py) координирует стадии, [store.py](store.py) сохраняет
 fingerprint, состояние, события и единственный терминальный результат.
 Docker target `gateway` находится в [общем Dockerfile](../../docker/Dockerfile.services).
+Жизненный цикл и идемпотентность определены в
+[ADR-0004](../../docs/adr/0004-run-lifecycle.md).
 
 Все маршруты, включая `/health`, требуют `CLIENT_TOKEN`. Запуск —
 `python -m services.gateway.server`; Compose публикует порт 8080 только на loopback.

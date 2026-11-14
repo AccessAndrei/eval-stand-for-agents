@@ -3,6 +3,8 @@
 Реализация — этот Python-пакет; Docker target
 `manager` в [общем Dockerfile](../../docker/Dockerfile.services). Это единственный основной сервис
 с Docker socket. Внешний запрос не может выбрать произвольную команду Docker.
+Полномочия, изоляция и сбор файлов определены в
+[ADR-0002](../../docs/adr/0002-sandbox-authority.md).
 
 [server.py](server.py) принимает защищённые `MANAGER_TOKEN`
 запросы provision, lookup по run id, collect, release, cancel и shutdown на 8081.

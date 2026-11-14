@@ -190,10 +190,8 @@ def _validate_result(result: dict[str, Any]) -> None:
             )
     if result["tokens"].get("mode") == "observed_usage":
         _require(
-            result["provider_profile"] == "luna"
-            and result["model"] == "gpt-6-luna"
-            and snapshot is not None,
-            "Наблюдаемый бюджет разрешён только для согласованного профиля Luna",
+            snapshot is not None,
+            "Наблюдаемый бюджет требует снимка конфигурации провайдера",
         )
     _require(math.isfinite(result["duration_s"]), "Длительность должна быть конечной")
     artifacts = result["artifacts"]

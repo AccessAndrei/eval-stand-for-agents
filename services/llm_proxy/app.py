@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -11,9 +13,7 @@ import aiohttp
 from aiohttp import web
 
 from services.common.http import valid_bearer
-from services.harness.credentials import CredentialError
 from services.llm_proxy.budget import BudgetError, Ledger, run_path
-from services.llm_proxy.native_auth import NativeAuthError, NativeAuthReader
 from services.llm_proxy.profiles import (
     MOCK_BUDGET,
     Profile,
@@ -21,9 +21,8 @@ from services.llm_proxy.profiles import (
     load_profiles,
     mock_input_tokens,
 )
+from services.llm_proxy.providers import ADAPTERS, ProviderAuthError, api_key
 from services.llm_proxy.stream import SSEObserver
-
-AUTH_CALLBACK_URL = "http://harness:8083/v0/auth/prepare"
 
 
 class Proxy:
@@ -33,16 +32,12 @@ class Proxy:
         state_dir: Path,
         token: str,
         *,
-        auth_root: Path | None = None,
-        auth_callback_url: str | None = None,
+        environ: Mapping[str, str] | None = None,
     ) -> None:
         if len(token) < 24:
             raise ValueError("Требуется отдельный управляющий токен")
         self.profiles, self.state_dir, self.token = profiles, state_dir, token
-        self.auth = NativeAuthReader(auth_root, token) if auth_root else None
-        if auth_root and auth_callback_url != AUTH_CALLBACK_URL:
-            raise ValueError("invalid_auth_callback_url")
-        self.auth_callback_url = auth_callback_url
+        self.environ = os.environ if environ is None else environ
         self.ledgers: dict[str, Ledger] = {}
         self.tasks: dict[str, asyncio.Task] = {}
         self.lock = asyncio.Lock()
@@ -98,55 +93,12 @@ class Proxy:
         return profile
 
     async def check_profile(self, profile: Profile) -> None:
-        try:
-            profile.compatible()
-        except ProfileError as error:
-            if str(error) != "live_authorization_not_ready":
-                raise
-        await self.ensure_auth(profile)
-        profile.compatible(
-            live_ready=(
-                profile.auth == "chatgpt"
-                and self.auth is not None
-                and self.auth.status()["ready"]
-            )
-        )
-
-    async def ensure_auth(self, profile: Profile, *, force: bool = False) -> None:
-        if profile.auth != "chatgpt":
-            return
-        if self.auth is None:
-            raise NativeAuthError("live_authorization_not_ready")
-        state = self.auth.status()
-        if force or state["reason"] == "auth_refresh_required":
-            if not self.auth_callback_url:
-                raise NativeAuthError("auth_refresh_unavailable")
-            async with self.session.post(
-                self.auth_callback_url,
-                json={"force_refresh": True},
-                headers={"Authorization": "Bearer " + self.token},
-                timeout=aiohttp.ClientTimeout(total=95),
-                allow_redirects=False,
-            ) as response:
-                raw = bytearray()
-                async for chunk in response.content.iter_chunked(4096):
-                    raw.extend(chunk)
-                    if len(raw) > 65536:
-                        raise NativeAuthError("auth_refresh_unavailable")
-                if response.status != 200 or json.loads(raw).get("ready") is not True:
-                    raise NativeAuthError("auth_refresh_failed")
-            state = self.auth.status()
-        if not state["ready"]:
-            raise NativeAuthError("live_authorization_not_ready")
+        profile.compatible()
+        api_key(profile, self.environ)
 
     async def health(self, request: web.Request) -> web.Response:
         self.authorize(request)
-        return web.json_response(
-            {
-                "status": "ready",
-                "live_auth_ready": self.auth.status()["ready"] if self.auth else False,
-            }
-        )
+        return web.json_response({"status": "ready"})
 
     async def preflight(self, request: web.Request) -> web.Response:
         self.authorize(request)
@@ -220,7 +172,7 @@ class Proxy:
         profile = Profile(**snapshot)
         try:
             await self.check_profile(profile)
-        except (NativeAuthError, CredentialError):
+        except ProviderAuthError:
             ledger.fail("auth_error")
             raise
         body = await request.json()
@@ -270,16 +222,6 @@ class Proxy:
             upstream = await self.post_model(
                 profile, body, request.match_info["run_id"]
             )
-            if upstream.status == 401 and profile.auth == "chatgpt":
-                # 401 до успешного ответа не означает начавшуюся генерацию.
-                # Единственное повторение — после нативного refresh; не после SSE.
-                upstream.release()
-                await self.ensure_auth(profile, force=True)
-                ledger.data["auth_retries"] = ledger.data.get("auth_retries", 0) + 1
-                ledger.save()
-                upstream = await self.post_model(
-                    profile, body, request.match_info["run_id"]
-                )
             async with upstream:
                 if upstream.status != 200:
                     await self.record_rejection(upstream, ledger)
@@ -290,7 +232,7 @@ class Proxy:
                     )
                     return web.json_response({"error": "provider_error"}, status=502)
                 await downstream.prepare(request)
-                async for chunk in upstream.content.iter_chunked(16_384):
+                async for chunk in ADAPTERS[profile.protocol].events(upstream):
                     forwarded += len(chunk)
                     if forwarded > 8_388_608:
                         raise ValueError("stream_limit_exceeded")
@@ -317,7 +259,7 @@ class Proxy:
         except asyncio.CancelledError:
             ledger.fail("cancelled")
             raise
-        except (NativeAuthError, CredentialError):
+        except ProviderAuthError:
             ledger.fail("auth_error")
             return web.json_response({"error": "auth_error"}, status=401)
         except (
@@ -369,15 +311,13 @@ class Proxy:
     async def post_model(
         self, profile: Profile, body: dict, run_id: str
     ) -> aiohttp.ClientResponse:
-        headers = {"X-Eval-Run-Id": run_id}
-        if profile.auth == "chatgpt":
-            if self.auth is None:
-                raise NativeAuthError("live_authorization_not_ready")
-            headers.update(self.auth.inference_headers())
+        outgoing = ADAPTERS[profile.protocol].prepare(
+            profile, body, run_id, api_key(profile, self.environ)
+        )
         return await self.session.post(
-            profile.endpoint.rstrip("/") + "/responses",
-            json=body,
-            headers=headers,
+            outgoing.url,
+            json=outgoing.body,
+            headers=outgoing.headers,
             timeout=aiohttp.ClientTimeout(total=profile.timeout_s),
             allow_redirects=False,
         )
@@ -394,7 +334,7 @@ async def errors(request: web.Request, handler: Any) -> web.StreamResponse:
         return web.json_response({"error": str(error)}, status=422)
     except BudgetError as error:
         return web.json_response({"error": str(error)}, status=429)
-    except (NativeAuthError, CredentialError):
+    except ProviderAuthError:
         return web.json_response({"error": "auth_error"}, status=401)
     except (ValueError, KeyError, TypeError):
         return web.json_response({"error": "invalid_request"}, status=400)
@@ -407,15 +347,13 @@ def create_app(
     state_dir: Path,
     token: str,
     *,
-    auth_root: Path | None = None,
-    auth_callback_url: str | None = None,
+    environ: Mapping[str, str] | None = None,
 ) -> web.Application:
     proxy = Proxy(
-        load_profiles(profiles_path),
+        load_profiles(profiles_path, environ),
         state_dir,
         token,
-        auth_root=auth_root,
-        auth_callback_url=auth_callback_url,
+        environ=environ,
     )
     app = web.Application(middlewares=[errors], client_max_size=1_048_576)
     app[PROXY_KEY] = proxy
@@ -437,6 +375,4 @@ def create_app(
     app.router.add_get("/v0/runs/{run_id}", proxy.get_run)
     app.router.add_post("/v0/runs/{run_id}/close", proxy.close_run)
     app.router.add_post("/v0/runs/{run_id}/responses", proxy.responses)
-    if proxy.auth is not None:
-        app.router.add_post("/v0/auth/native-refresh", proxy.auth.refresh_handler)
     return app

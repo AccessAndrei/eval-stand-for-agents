@@ -44,12 +44,6 @@ class Client:
                             "storage_budget_exceeded",
                             "busy",
                             "auth_error",
-                            "auth_refresh_required",
-                            "auth_recovery_required",
-                            "native_auth_preparation_failed",
-                            "native_auth_cleanup_unconfirmed",
-                            "auth_not_configured",
-                            "live_authorization_not_ready",
                         }:
                             code = candidate
                     except (ValueError, AttributeError):
