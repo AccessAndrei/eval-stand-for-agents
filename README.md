@@ -8,39 +8,7 @@
 
 ## Архитектура
 
-```mermaid
-flowchart LR
-    subgraph Mac["macOS · клиент"]
-        Client["GUI / headless-раннер"]
-        Folder["Выбранная папка · SFTP-экспорт"]
-    end
-    subgraph VM["Docker Desktop · Linux VM"]
-        Gateway["Gateway · сессии и события"]
-        Harness["Harness · Codex app-server"]
-        Proxy["LLM-прокси · доступ и бюджет"]
-        Manager["Sandbox Manager"]
-        Broker["Workspace Broker · обратный SSH"]
-        Driver["Docker VolumeDriver · SSHFS"]
-        Exec["Изолированный сандбокс · Codex exec-server"]
-        Work["Смонтированный /work"]
-        State["Метаданные и итоги запусков"]
-    end
-    Model["LLM · Responses API"]
-    Client <-->|"HTTP v1 · запросы, NDJSON-события"| Gateway
-    Client -->|"Обратный SSH-туннель"| Broker
-    Gateway -->|"Запуск и отмена turn"| Harness
-    Gateway -->|"Управление сессией и сбор"| Manager
-    Gateway --> State
-    Harness -->|"Запросы модели с полномочием запуска"| Proxy
-    Proxy <-->|"Responses API"| Model
-    Harness <-->|"Инструменты через CONNECT"| Manager
-    Manager <-->|"Нативный stdio"| Exec
-    Manager -->|"Подготовка и снятие тома через Docker Engine"| Driver
-    Exec <-->|"Чтение и запись"| Work
-    Work <-->|"Том"| Driver
-    Driver <-->|"SSHFS через обратный туннель"| Broker
-    Broker <-->|"SFTP"| Folder
-```
+![Архитектура](docs/images/runtime_architecture.svg)
 
 [Харнес](docs/harness.md), [контракты](contracts/README.md), [ADR](docs/adr/README.md).
 
@@ -135,7 +103,4 @@ results/                       результаты прогонов
 Текущий профиль `api` получает модель и endpoint из `MODEL_ID` и
 `MODEL_ENDPOINT`; API-ключ `MODEL_API_KEY` доступен только LLM-прокси.
 Для совместимого Responses endpoint достаточно настроить профиль; другой
-формат API подключается отдельным адаптером. [Настройка](docs/harness.md#запуск).
-
-Исторический набор выполнен на Luna (`gpt-6-luna`) с прежней
-ChatGPT-авторизацией. Он не подтверждает live-работу нового API-профиля.
+формат API подключается отдельным адаптером. [Настройка](#запуск-сервера).
