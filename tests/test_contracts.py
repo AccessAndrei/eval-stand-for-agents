@@ -1,5 +1,6 @@
 """Контракты отвергают опасные входы и ложные успешные итоги."""
 
+import json
 from copy import deepcopy
 from pathlib import Path
 
@@ -75,6 +76,53 @@ def test_valid_launch_and_fingerprint_canonicalization(launch: dict) -> None:
     assert launch == original
     reordered["prompt"] += " Ещё раз."
     assert fingerprint(launch) != fingerprint(reordered)
+
+
+@pytest.mark.parametrize("task_id", ["B1.1", "C1", "own_search.v2-ru", "A" * 64])
+def test_task_id_is_shared_across_run_contracts(
+    launch: dict, result: dict, task_id: str
+) -> None:
+    validate("task_id", task_id)
+    launch["task_id"] = result["task_id"] = task_id
+    validate("launch", launch)
+    validate("result", result)
+    validate(
+        "provision",
+        {
+            "version": launch["version"],
+            "run_id": launch["run_id"],
+            "task_id": task_id,
+            "project_id": "test-project",
+            "fingerprint": fingerprint(launch),
+            "files": launch["files"],
+            "read_only_paths": [],
+            "timeout_s": launch["timeout_s"],
+        },
+    )
+    validate(
+        "status",
+        {
+            "version": launch["version"],
+            "run_id": launch["run_id"],
+            "task_id": task_id,
+            "fingerprint": fingerprint(launch),
+            "state": "terminal",
+            "updated_at": result["finished_at"],
+            "result": result,
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    "task_id", ["", "../C1", "B2/1", "C1\n", "C1\t", "Б1", "A" * 65, 123]
+)
+def test_task_id_rejects_unsafe_or_malformed_values(
+    launch: dict, task_id: object
+) -> None:
+    launch["task_id"] = task_id
+    for kind, value in (("task_id", task_id), ("launch", launch)):
+        with pytest.raises(ContractError):
+            validate(kind, value)
 
 
 @pytest.mark.parametrize(
@@ -207,12 +255,15 @@ def test_status_cannot_publish_result_early(result: dict, launch: dict) -> None:
         validate("status", status)
 
 
-def make_report(result: dict) -> dict:
+def make_report(
+    result: dict,
+    task_ids: tuple[str, ...] = ("B1.1", "B2.1", "B3.1", "B4.1", "B5.1"),
+) -> dict:
     rows = []
-    for index in range(1, 6):
+    for index, task_id in enumerate(task_ids, 1):
         item = deepcopy(result)
-        item.update(task_id=f"B{index}.1", run_id=f"run-{index}")
-        if index == 5:
+        item.update(task_id=task_id, run_id=f"run-{index}")
+        if task_id == "B5.1":
             item["evidence_status"] = "complete"
         rows.append(
             {
@@ -233,7 +284,7 @@ def make_report(result: dict) -> dict:
         "started_at": result["started_at"],
         "finished_at": result["finished_at"],
         "tasks": rows,
-        "evaluated": 5,
+        "evaluated": len(rows),
         "wrong_answers": 0,
         "technical_skips": 0,
         "success": True,
@@ -260,13 +311,63 @@ def test_full_report_success_is_derived_from_every_outcome(result: dict) -> None
 
 def test_report_rejects_duplicate_tasks_and_false_model_admission(result: dict) -> None:
     report = make_report(result)
-    report["tasks"][1] = deepcopy(report["tasks"][0])
-    with pytest.raises(ContractError, match="ровно"):
+    report["tasks"][1]["task_id"] = report["tasks"][0]["task_id"]
+    report["tasks"][1]["result"]["task_id"] = report["tasks"][0]["task_id"]
+    with pytest.raises(ContractError, match="Повторяющиеся идентификаторы задач"):
         validate("report", report)
     report = make_report(result)
     report["course_model_status"]["status"] = "confirmed"
     with pytest.raises(ContractError, match="Допуск"):
         validate("report", report)
+
+
+def test_report_rejects_empty_dataset_even_with_zero_counters(result: dict) -> None:
+    with pytest.raises(ContractError, match="minItems"):
+        validate("report", make_report(result, ()))
+
+
+@pytest.mark.parametrize(
+    "task_ids",
+    [
+        ("C1",),
+        ("B6.1", "C1", "own_search.v2-ru", "B5.1", "B1.1", "B2.1"),
+    ],
+)
+def test_report_accepts_dataset_order_and_checks_actual_counts(
+    result: dict, task_ids: tuple[str, ...]
+) -> None:
+    report = make_report(result, task_ids)
+    validate("report", report)
+    report["tasks"][-1].update(
+        run_id=None,
+        result=None,
+        checker_status="not_run",
+        skip_reason="Прогон остановлен после сбоя",
+        trace_path=None,
+        artifact_path=None,
+    )
+    report.update(evaluated=len(task_ids) - 1, technical_skips=1, success=False)
+    validate("report", report)
+    report["technical_skips"] = 0
+    with pytest.raises(ContractError, match="число пропусков"):
+        validate("report", report)
+
+
+def test_aggregate_report_accepts_multiple_results_above_wire_message_limit(
+    result: dict,
+) -> None:
+    result["artifacts"] = [
+        {
+            "path": f"output/{index:03d}/" + "x" * 500,
+            "size_bytes": 1,
+            "sha256": "a" * 64,
+        }
+        for index in range(256)
+    ]
+    validate("result", result)
+    report = make_report(result, tuple(f"own-{index}" for index in range(18)))
+    assert len(json.dumps(report, ensure_ascii=False)) > 2_500_000
+    validate("report", report)
 
 
 def test_no_checker_on_incomplete_evidence_or_collection(result: dict) -> None:

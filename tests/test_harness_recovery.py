@@ -271,6 +271,59 @@ def test_normal_completion_receipt_preserves_native_evidence(
     assert asyncio.run(owner.reconcile())["run-1"] == result
 
 
+def test_mounted_attempt_registry_keeps_codex_home_outside_durable_state(
+    tmp_path: Path,
+    recovery: RecoveryFixture,
+) -> None:
+    _, proc, _ = recovery
+    durable = tmp_path / "durable"
+    scratch = tmp_path / "scratch"
+    owner = HarnessRecovery(durable, mounted_state=scratch, proc_root=proc)
+    session_id = "b" * 32
+    home = owner.session_home(session_id)
+    owner.begin_attempt("run-1", home, mounted=(session_id, "a" * 64))
+    assert configured_home(home.parent, session_id) == home
+    raw = "worktree-private-output"
+    (home / "logs.sqlite").write_text(raw)
+    assert not (durable / "run-1").exists()
+
+    restored = HarnessRecovery(durable, mounted_state=scratch, proc_root=proc)
+    status = asyncio.run(restored.reconcile())["run-1"]
+    assert status["session_id"] == session_id and status["released"]
+    assert (home / "logs.sqlite").is_file() and raw not in json.dumps(status)
+    assert not (home / "environments.toml").exists()
+    restored.close_session(session_id)
+    restored.close_session(session_id)
+    assert not home.exists() and restored.session_closed(session_id)
+
+
+def test_shared_v1_home_survives_turn_and_cannot_be_closed_while_next_registered(
+    tmp_path: Path, recovery: RecoveryFixture
+) -> None:
+    _, proc, _ = recovery
+    durable = tmp_path / "durable"
+    scratch = tmp_path / "scratch"
+    owner = HarnessRecovery(durable, mounted_state=scratch, proc_root=proc)
+    session_id = "b" * 32
+    home = owner.session_home(session_id)
+    a = owner.begin_attempt("run-1", home, mounted=(session_id, "a" * 64))
+    configured_home(home.parent, session_id)
+    rollout = home / "rollout.jsonl"
+    rollout.write_text("одна история")
+    result = asyncio.run(
+        owner.complete("run-1", {**native_snapshot(), "continuation_safe": True})
+    )
+    assert result["released"] and result["continuation_safe"]
+    assert rollout.read_text() == "одна история"
+    assert not (home / "config.toml").exists()
+    b = owner.begin_attempt("run-2", home, mounted=(session_id, "c" * 64))
+    assert a != b
+    with pytest.raises(RecoveryError, match="harness_cleanup_unconfirmed"):
+        owner.close_session(session_id)
+    assert owner.status("run-1") == result
+    assert rollout.is_file() and owner.session_closed(session_id)
+
+
 def test_crash_after_home_deletion_does_not_lose_native_result(
     recovery: RecoveryFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:

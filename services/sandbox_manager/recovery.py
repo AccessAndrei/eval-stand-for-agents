@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from contracts import ContractError, validate
 
 from .config import OWNER, PREFIX
-from .manager import ManagerError, resource_name
+from .manager import RESOURCE_SUFFIXES, WORKSPACE_REF, ManagerError, resource_name
 
 if TYPE_CHECKING:
     from .manager import Manager
@@ -48,7 +48,9 @@ async def discover_orphans(manager: Manager) -> list[dict]:
             path = manager._path(record["run_id"])
             if path.exists():
                 current = manager._load(record["run_id"])
-                if current["handle"] != record["handle"]:
+                if current["handle"] != record["handle"] or current.get(
+                    "workspace"
+                ) != record.get("workspace"):
                     raise ManagerError("orphan_handle_conflict")
             else:
                 try:
@@ -65,6 +67,7 @@ def _record(manager: Manager, name: str, kind: str, labels: dict) -> dict:
         "prepare": "container",
         "collector": "container",
         "inputs": "volume",
+        "workspace": "volume",
     }[role]
     if expected_kind != kind:
         raise KeyError("resource_role")
@@ -81,13 +84,18 @@ def _record(manager: Manager, name: str, kind: str, labels: dict) -> dict:
     }
     validate("manager_status", record)
     record["name"] = resource_name(record["project_id"], record["run_id"])
-    suffix = {
-        "sandbox": "",
-        "prepare": "-prepare",
-        "collector": "-collector",
-        "inputs": "-inputs",
-    }[role]
-    if name != record["name"] + suffix or any(
+    workspace_ref = labels.get(f"{PREFIX}.workspace_ref")
+    mode = labels.get(f"{PREFIX}.workspace_mode")
+    if workspace_ref is not None or mode is not None or role == "workspace":
+        if (
+            role not in {"sandbox", "workspace"}
+            or mode not in {"rw", "ro"}
+            or not isinstance(workspace_ref, str)
+            or not WORKSPACE_REF.fullmatch(workspace_ref)
+        ):
+            raise KeyError("workspace_identity")
+        record["workspace"] = {"workspace_ref": workspace_ref, "mode": mode}
+    if name != record["name"] + RESOURCE_SUFFIXES[role] or any(
         labels.get(key) != value for key, value in manager._labels(record, role).items()
     ):
         raise KeyError("resource_identity")

@@ -177,9 +177,11 @@ def main() -> int:
             "gateway",
             "harness",
             "sandbox-manager",
+            "workspace-broker",
             "llm-proxy",
             "mock-provider",
             "mock-provider-alt",
+            "codex-source",
             "sandbox-image",
             "runner",
         }
@@ -214,6 +216,14 @@ def main() -> int:
             .decode()
             .splitlines()
         )
+        project_digest = hashlib.sha256(manager_project.encode()).hexdigest()[:16]
+        workspace_drivers = [
+            name
+            for name in docker("plugin", "ls", "--format", "{{.Name}}")
+            .decode()
+            .splitlines()
+            if name.startswith(f"eval-workspace-{project_digest}-")
+        ]
         preserved = all(
             Path(path).is_file()
             and hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest
@@ -224,6 +234,7 @@ def main() -> int:
             foreign_running=info["State"]["Running"],
             runtime_containers_left=containers,
             state_volumes_left=volumes + dynamic_volumes,
+            workspace_drivers_left=workspace_drivers,
             exported_files_checked=len(before),
             exports_preserved=preserved,
             management_env_preserved=hashlib.sha256(
@@ -249,6 +260,7 @@ def main() -> int:
             and not containers
             and not volumes
             and not dynamic_volumes
+            and not workspace_drivers
             and preserved
             and report["management_env_preserved"]
             and auth_preserved

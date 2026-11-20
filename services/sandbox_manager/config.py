@@ -37,7 +37,7 @@ class Limits:
         if self.work + self.temporary >= self.memory - self.collector_memory:
             raise ValueError("tmpfs_exceeds_sandbox_budget")
 
-    def docker_args(self) -> list[str]:
+    def docker_args(self, *, mounted: bool = False) -> list[str]:
         return [
             "--network",
             "none",
@@ -58,8 +58,14 @@ class Limits:
             str(self.pids),
             "--log-driver",
             "none",
-            "--tmpfs",
-            f"/work:rw,nosuid,nodev,size={self.work},uid=1000,gid=1000,mode=0700",
+            *(
+                []
+                if mounted
+                else [
+                    "--tmpfs",
+                    f"/work:rw,nosuid,nodev,size={self.work},uid=1000,gid=1000,mode=0700",
+                ]
+            ),
             "--tmpfs",
             f"/tmp:rw,noexec,nosuid,nodev,size={self.temporary},mode=1777",
         ]

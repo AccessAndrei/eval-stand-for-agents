@@ -13,17 +13,18 @@ import pytest
 
 from baf.runner.catalog import (
     B5_COMMAND,
-    DEFAULT_CATALOG,
     CatalogError,
     Task,
-    load_checkpoint,
+    load_dataset,
 )
 from baf.runner.checkers import run_checker
+
+CONTROL_DATASET = Path("baf/control.yaml")
 
 
 @pytest.fixture
 def tasks() -> tuple[Task, ...]:
-    return load_checkpoint()
+    return load_dataset(CONTROL_DATASET)
 
 
 def prepare(task: Task, root: Path) -> Path:
@@ -69,7 +70,7 @@ def proof(task: Task) -> dict:
     }
 
 
-def test_exactly_five_complete_tasks(tasks: tuple[Task, ...]) -> None:
+def test_control_dataset_is_complete(tasks: tuple[Task, ...]) -> None:
     assert tuple(task.id for task in tasks) == ("B1.1", "B2.1", "B3.1", "B4.1", "B5.1")
     assert all(task.fixture_files and task.checker_path.is_file() for task in tasks)
     assert all(
@@ -79,25 +80,25 @@ def test_exactly_five_complete_tasks(tasks: tuple[Task, ...]) -> None:
 
 
 def test_incomplete_fixture_rejected_before_run(tmp_path: Path) -> None:
-    shutil.copytree(DEFAULT_CATALOG.parent, tmp_path / "baf")
+    shutil.copytree(CONTROL_DATASET.parent, tmp_path / "baf")
     (tmp_path / "baf/B1-read/B1.1-service-port/fixture/config/app.yaml").unlink()
     with pytest.raises(CatalogError, match="неполна"):
-        load_checkpoint(tmp_path / "baf/checkpoint1.yaml")
+        load_dataset(tmp_path / CONTROL_DATASET)
 
 
 @pytest.mark.parametrize("path", ["../elsewhere", "/tmp/escape", "B1-read/../other"])
 def test_catalog_rejects_traversal(tmp_path: Path, path: str) -> None:
-    content = DEFAULT_CATALOG.read_text().replace("B1-read/B1.1-service-port", path)
-    catalog = tmp_path / "checkpoint1.yaml"
+    content = CONTROL_DATASET.read_text().replace("B1-read/B1.1-service-port", path)
+    catalog = tmp_path / "control.yaml"
     catalog.write_text(content)
     with pytest.raises(CatalogError, match="путь"):
-        load_checkpoint(catalog)
+        load_dataset(catalog)
 
 
 def test_catalog_does_not_include_full_catalog(tmp_path: Path) -> None:
-    shutil.copytree(DEFAULT_CATALOG.parent, tmp_path / "baf")
+    shutil.copytree(CONTROL_DATASET.parent, tmp_path / "baf")
     (tmp_path / "baf/catalog.yaml").write_text("невалидный: [")
-    assert len(load_checkpoint(tmp_path / "baf/checkpoint1.yaml")) == 5
+    assert len(load_dataset(tmp_path / CONTROL_DATASET)) == 5
 
 
 @pytest.mark.parametrize("index,answer", [(0, "8137"), (1, "src/utils/dates.py")])

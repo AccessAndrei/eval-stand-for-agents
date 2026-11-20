@@ -71,7 +71,13 @@ def configure(provenance_path: Path, env_path: Path = Path(".env")) -> None:
     lines = env_path.read_text().splitlines() if env_path.exists() else []
     existing = assignments(lines)
     changes = {}
-    for name in ("CLIENT_TOKEN", "MANAGER_TOKEN", "HARNESS_TOKEN", "PROXY_TOKEN"):
+    for name in (
+        "CLIENT_TOKEN",
+        "MANAGER_TOKEN",
+        "HARNESS_TOKEN",
+        "PROXY_TOKEN",
+        "BROKER_TOKEN",
+    ):
         if not existing.get(name):
             changes[name] = secrets.token_urlsafe(32)
         elif "$" not in existing[name] and (

@@ -1,5 +1,4 @@
 VENV ?= .venv
-PROFILE ?= api
 DOCKER_PLATFORM ?= $(if $(filter arm64 aarch64,$(shell uname -m)),linux/arm64,linux/amd64)
 export DOCKER_DEFAULT_PLATFORM = $(DOCKER_PLATFORM)
 export COMPOSE_PARALLEL_LIMIT = 1
@@ -21,12 +20,14 @@ check: lint format-check
 pre-commit:
 	$(VENV)/bin/pre-commit run --all-files
 
-.PHONY: checkpoint1 test-checkpoint1 test-offline preflight preflight-shared up down test-ci test-ui test-infra baf-smoke baf bench-fs bench-sandbox
-checkpoint1: preflight-shared
-	$(COMPOSE_LIVE) run --rm --no-deps --pull never runner --profile $(PROFILE) --results /results
-
-test-checkpoint1:
-	$(VENV)/bin/python -m pytest -q
+.PHONY: test-offline preflight preflight-shared up down test-ci test-ui test-infra baf-smoke baf bench-fs bench-sandbox
+baf: export BAF_DATASET := $(value DATASET)
+baf: export BAF_PROFILE := $(value PROFILE)
+baf:
+	@if [ -z "$$BAF_DATASET" ] || [ -z "$$BAF_PROFILE" ]; then \
+		echo "Укажите DATASET и PROFILE" >&2; exit 2; \
+	fi
+	$(VENV)/bin/python -m baf.runner --dataset "$$BAF_DATASET" --profile "$$BAF_PROFILE"
 
 # Совместимое имя; основная команда инфраструктурных проверок — из шаблона.
 test-offline: test-infra
@@ -52,15 +53,18 @@ down:
 
 test-ci: test-ui test-infra baf-smoke
 
+test-ui:
+	$(VENV)/bin/python -m pytest --tb=short -q tests/test_mounted_gui.py tests/test_mounted_client.py
+
 test-infra:
 	$(VENV)/bin/python -m tests.infra.offline_suite
 
+baf-smoke:
+	$(VENV)/bin/python -m baf.runner --smoke --dataset baf/smoke.yaml --profile mock
+
 # Интерфейс полного задания сохраняется; отложенные функции не дают ложный успех.
-test-ui: UNAVAILABLE = Десктоп-клиент и UI-тесты ещё не реализованы
-baf-smoke: UNAVAILABLE = Smoke по всем восьми БАФ ещё не реализован; checkpoint1 охватывает B1–B5
-baf: UNAVAILABLE = Полный каталог БАФ и сравнение пар ещё не реализованы
 bench-fs: UNAVAILABLE = Замеры файловой системы через клиентское монтирование ещё не реализованы
 bench-sandbox: UNAVAILABLE = Серия замеров cold start, exec и памяти ещё не реализована
-test-ui baf-smoke baf bench-fs bench-sandbox:
+bench-fs bench-sandbox:
 	@echo "$@: $(UNAVAILABLE)" >&2
 	@exit 2

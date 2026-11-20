@@ -13,7 +13,8 @@ import aiohttp
 from aiohttp import web
 
 from services.common.http import valid_bearer
-from services.llm_proxy.budget import BudgetError, Ledger, run_path
+from services.common.storage import atomic_json
+from services.llm_proxy.budget import BudgetError, Ledger, RunBinding, run_path
 from services.llm_proxy.profiles import (
     MOCK_BUDGET,
     Profile,
@@ -23,6 +24,18 @@ from services.llm_proxy.profiles import (
 )
 from services.llm_proxy.providers import ADAPTERS, ProviderAuthError, api_key
 from services.llm_proxy.stream import SSEObserver
+
+CLOSE_TIMEOUT = 10
+
+
+def _reference(request: web.Request) -> str:
+    if "proxy_ref" in request.match_info:
+        return request.match_info["proxy_ref"]
+    return request.match_info["run_id"]
+
+
+def _belongs(request: web.Request, ledger: Ledger) -> bool:
+    return ("proxy_ref" in request.match_info) == (ledger.binding is not None)
 
 
 class Proxy:
@@ -39,8 +52,9 @@ class Proxy:
         self.profiles, self.state_dir, self.token = profiles, state_dir, token
         self.environ = os.environ if environ is None else environ
         self.ledgers: dict[str, Ledger] = {}
+        self.bindings: dict[RunBinding, str] = {}
         self.tasks: dict[str, asyncio.Task] = {}
-        self.lock = asyncio.Lock()
+        self.storage_failed = False
         state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         state_dir.chmod(0o700)
         for path in state_dir.glob("*.json"):
@@ -49,7 +63,13 @@ class Proxy:
             if not ledger.data["closed"]:
                 ledger.fail("interrupted")
                 ledger.close()
-            self.ledgers[path.stem] = ledger
+            self._remember(path.stem, ledger)
+
+    def _remember(self, reference: str, ledger: Ledger) -> None:
+        if ledger.binding is not None:
+            if self.bindings.setdefault(ledger.binding, reference) != reference:
+                raise ValueError("duplicate_run_binding")
+        self.ledgers[reference] = ledger
 
     def authorize(self, request: web.Request, token: str | None = None) -> None:
         if not valid_bearer(
@@ -58,11 +78,12 @@ class Proxy:
             raise web.HTTPUnauthorized()
 
     def ledger(self, request: web.Request) -> Ledger:
-        run_id = request.match_info["run_id"]
-        run_path(self.state_dir, run_id)
-        if run_id not in self.ledgers:
+        reference = _reference(request)
+        run_path(self.state_dir, reference)
+        ledger = self.ledgers.get(reference)
+        if ledger is None or not _belongs(request, ledger):
             raise web.HTTPNotFound()
-        return self.ledgers[run_id]
+        return ledger
 
     async def verify(self, name: str) -> Profile:
         profile = self.profiles.get(name)
@@ -98,6 +119,8 @@ class Proxy:
 
     async def health(self, request: web.Request) -> web.Response:
         self.authorize(request)
+        if self.storage_failed:
+            raise web.HTTPServiceUnavailable(text="proxy_state_unavailable")
         return web.json_response({"status": "ready"})
 
     async def preflight(self, request: web.Request) -> web.Response:
@@ -108,7 +131,7 @@ class Proxy:
     def status(self, run_id: str, ledger: Ledger) -> dict[str, Any]:
         snapshot = ledger.data.get("profile_snapshot")
         return {
-            "run_id": run_id,
+            **(ledger.binding.public() if ledger.binding else {"run_id": run_id}),
             "provider_profile": ledger.data["profile"],
             "model": snapshot["model"] if snapshot else None,
             "provider_snapshot": snapshot,
@@ -122,48 +145,102 @@ class Proxy:
             "upstream_failure": ledger.data.get("upstream_failure"),
         }
 
+    def _existing_run(
+        self, path: Path, profile: str, binding: RunBinding | None
+    ) -> Ledger | None:
+        if self.storage_failed:
+            raise web.HTTPServiceUnavailable(text="proxy_state_unavailable")
+        if path.with_suffix(".closed").exists():
+            raise web.HTTPConflict(text="run_closed")
+        ledger = self.ledgers.get(path.stem)
+        if ledger is None and path.exists():
+            self.storage_failed = True
+            raise web.HTTPServiceUnavailable(text="proxy_state_unavailable")
+        if ledger is not None and (
+            ledger.data["profile"] != profile or ledger.binding != binding
+        ):
+            raise web.HTTPConflict(text="run_conflict")
+        if binding is not None and self.bindings.get(binding, path.stem) != path.stem:
+            raise web.HTTPConflict(text="run_conflict")
+        return ledger
+
     async def open_run(self, request: web.Request) -> web.Response:
         self.authorize(request)
         body = await request.json()
-        if not isinstance(body, dict) or set(body) != {"provider_profile"}:
+        if not isinstance(body, dict) or "provider_profile" not in body:
             raise ValueError("invalid_open_request")
-        run_id, name = request.match_info["run_id"], body["provider_profile"]
-        path = run_path(self.state_dir, run_id)
-        async with self.lock:
-            ledger = self.ledgers.get(run_id)
-            if ledger is not None and ledger.data["profile"] != name:
-                raise web.HTTPConflict(text="run_conflict")
+        name = body.pop("provider_profile")
+        if "proxy_ref" in request.match_info:
+            binding = RunBinding.read(body)
+        elif body:
+            raise ValueError("invalid_open_request")
+        else:
+            binding = None
+        reference = _reference(request)
+        path = run_path(self.state_dir, reference)
+        ledger = self._existing_run(path, name, binding)
+        if ledger is None:
+            profile = await self.verify(name)
+            # После проверки профиля запрос мог быть закрыт или уже принят.
+            ledger = self._existing_run(path, name, binding)
             if ledger is None:
-                profile = await self.verify(name)
-                ledger = Ledger(path, name, profile_snapshot=profile.snapshot())
-                self.ledgers[run_id] = ledger
-            result = self.status(run_id, ledger)
-            result["inference_token"] = ledger.data["token"]
+                try:
+                    ledger = Ledger(
+                        path, name, profile_snapshot=profile.snapshot(), binding=binding
+                    )
+                except OSError as error:
+                    # После неясного исхода записи только перезапуск сверит журнал.
+                    self.storage_failed = True
+                    raise web.HTTPServiceUnavailable(
+                        text="proxy_state_unavailable"
+                    ) from error
+                self._remember(reference, ledger)
+        result = self.status(reference, ledger)
+        if grant := ledger.inference_token:
+            result["inference_token"] = grant
         return web.json_response(result)
 
     async def get_run(self, request: web.Request) -> web.Response:
         self.authorize(request)
         ledger = self.ledger(request)
-        return web.json_response(self.status(request.match_info["run_id"], ledger))
+        return web.json_response(self.status(_reference(request), ledger))
 
     async def close_run(self, request: web.Request) -> web.Response:
         self.authorize(request)
+        reference = _reference(request)
+        path = run_path(self.state_dir, reference)
+        if "proxy_ref" in request.match_info and reference not in self.ledgers:
+            # Даже если открытие ещё проверяет профиль, оно больше не выдаст grant.
+            try:
+                atomic_json(path.with_suffix(".closed"), {"version": "v1"})
+            except OSError as error:
+                self.storage_failed = True
+                raise web.HTTPServiceUnavailable(
+                    text="proxy_state_unavailable"
+                ) from error
+            return web.json_response({"error": "proxy_ref_fenced"}, status=404)
         ledger = self.ledger(request)
-        run_id = request.match_info["run_id"]
-        ledger.close()
-        if task := self.tasks.get(run_id):
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
-        return web.json_response(self.status(run_id, ledger))
+        try:
+            ledger.close()
+        finally:
+            if task := self.tasks.get(reference):
+                if not task.cancelling():
+                    task.cancel()
+                async with asyncio.timeout(CLOSE_TIMEOUT):
+                    await asyncio.shield(asyncio.gather(task, return_exceptions=True))
+        return web.json_response(self.status(reference, ledger))
 
     async def responses(self, request: web.Request) -> web.StreamResponse:
-        if request.match_info["run_id"] not in self.ledgers:
+        reference = _reference(request)
+        ledger = self.ledgers.get(reference)
+        if ledger is None or not _belongs(request, ledger):
             raise web.HTTPUnauthorized()
-        ledger = self.ledger(request)
-        self.authorize(request, ledger.data["token"])
-        run_id = request.match_info["run_id"]
+        if ledger.binding is None:
+            self.authorize(request, ledger.data["token"])
+        elif not ledger.matches_v1_grant(request.headers.get("Authorization", "")):
+            raise web.HTTPUnauthorized()
         ledger.check_open()
-        if run_id in self.tasks:
+        if reference in self.tasks:
             raise web.HTTPConflict(text="busy")
         snapshot = ledger.data.get("profile_snapshot")
         if not snapshot:
@@ -173,9 +250,14 @@ class Proxy:
         try:
             await self.check_profile(profile)
         except ProviderAuthError:
+            ledger.check_open()
             ledger.fail("auth_error")
             raise
         body = await request.json()
+        # После ожидания тела запрос ещё не правомочен менять бюджет или итог.
+        ledger.check_open()
+        if reference in self.tasks:
+            raise web.HTTPConflict(text="busy")
         if (
             not isinstance(body, dict)
             or body.get("model") != profile.model
@@ -191,21 +273,17 @@ class Proxy:
             )
             raise ValueError("invalid_responses_request")
         bounded = {**body, "max_output_tokens": profile.output_limit}
-        # Auth и чтение тела отдают управление: другой запрос мог занять слот.
-        ledger.check_open()
-        if run_id in self.tasks:
-            raise web.HTTPConflict(text="busy")
         request_id = (
             ledger.reserve_observed(profile.output_limit)
             if profile.budget_mode == "observed_usage"
             else ledger.reserve(mock_input_tokens(bounded), profile.output_limit)
         )
-        self.tasks[run_id] = asyncio.current_task()
+        self.tasks[reference] = asyncio.current_task()
         try:
             return await self.forward(request, profile, bounded, ledger, request_id)
         finally:
-            if self.tasks.get(run_id) is asyncio.current_task():
-                self.tasks.pop(run_id, None)
+            if self.tasks.get(reference) is asyncio.current_task():
+                self.tasks.pop(reference, None)
 
     async def forward(
         self,
@@ -217,11 +295,10 @@ class Proxy:
     ) -> web.StreamResponse:
         observer, forwarded, ending = SSEObserver(), 0, bytearray()
         settled = False
+        finished = False
         downstream = web.StreamResponse(headers={"Content-Type": "text/event-stream"})
         try:
-            upstream = await self.post_model(
-                profile, body, request.match_info["run_id"]
-            )
+            upstream = await self.post_model(profile, body, _reference(request))
             async with upstream:
                 if upstream.status != 200:
                     await self.record_rejection(upstream, ledger)
@@ -250,14 +327,16 @@ class Proxy:
                     settled = True
                 if observer.terminal != "response.completed":
                     ledger.fail("provider_error")
-                # Codex может начать следующий запрос сразу после completed;
-                # резерв и слот финализируются до отправки этого события.
-                self.tasks.pop(request.match_info["run_id"], None)
-                await downstream.write(ending)
-                await downstream.write_eof()
-                return downstream
+                finished = True
+            # Codex может начать следующий запрос сразу после completed;
+            # запрос upstream и резерв финализируются до отправки этого события.
+            self.tasks.pop(_reference(request), None)
+            await downstream.write(ending)
+            await downstream.write_eof()
+            return downstream
         except asyncio.CancelledError:
-            ledger.fail("cancelled")
+            if not finished:
+                ledger.fail("cancelled")
             raise
         except ProviderAuthError:
             ledger.fail("auth_error")
@@ -269,7 +348,7 @@ class Proxy:
             ValueError,
             BudgetError,
         ):
-            if not settled:
+            if not finished and not settled:
                 ledger.fail("transport_error")
             if not downstream.prepared:
                 return web.json_response({"error": "transport_error"}, status=502)
@@ -375,4 +454,8 @@ def create_app(
     app.router.add_get("/v0/runs/{run_id}", proxy.get_run)
     app.router.add_post("/v0/runs/{run_id}/close", proxy.close_run)
     app.router.add_post("/v0/runs/{run_id}/responses", proxy.responses)
+    app.router.add_post("/v1/runs/{proxy_ref}", proxy.open_run)
+    app.router.add_get("/v1/runs/{proxy_ref}", proxy.get_run)
+    app.router.add_post("/v1/runs/{proxy_ref}/close", proxy.close_run)
+    app.router.add_post("/v1/runs/{proxy_ref}/responses", proxy.responses)
     return app

@@ -1,0 +1,12 @@
+[
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"cat /work/README.md\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "custom_tool_call",
+    "name": "apply_patch",
+    "input": "*** Begin Patch\n*** Update File: /work/README.md\n@@\n ## Install\n \n-pip install calendar==1.2\n+pip install calendar==1.3\n*** End Patch"
+  }
+]

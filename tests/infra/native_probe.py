@@ -528,9 +528,10 @@ class Probe:
         task = None
         if scenario == "b5":
             from baf.runner.batch import launch_request
-            from baf.runner.catalog import load_checkpoint
+            from baf.runner.catalog import load_dataset
 
-            task = load_checkpoint()[-1]
+            dataset = load_dataset(Path("baf/control.yaml"))
+            task = next(task for task in dataset if task.id == "B5.1")
             launch = launch_request(task, self.run_id, profile)
             launch["timeout_s"] = self.timeout
         self.save("request.json", launch)
@@ -587,6 +588,7 @@ class Probe:
             "MANAGER_TOKEN",
             "HARNESS_TOKEN",
             "PROXY_TOKEN",
+            "BROKER_TOKEN",
             "STAND_INFERENCE_TOKEN",
             "EVAL_STAND_ATTEMPT_OWNER",
             "CODEX_HOME",

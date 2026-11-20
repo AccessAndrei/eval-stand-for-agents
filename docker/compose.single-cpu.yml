@@ -4,6 +4,8 @@ services:
   gateway: {cpus: 1}
   harness: {cpus: 1}
   sandbox-manager: {cpus: 1}
+  workspace-broker: {cpus: 1}
   llm-proxy: {cpus: 1}
   runner: {cpus: 1}
+  codex-source: {cpus: 1}
   sandbox-image: {cpus: 1}

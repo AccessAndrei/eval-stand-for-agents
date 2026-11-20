@@ -22,7 +22,7 @@ from typing import Callable
 from jsonschema import Draft202012Validator
 
 from contracts import schema
-from services.harness.settings import VERSION
+from services.harness.settings import ROUTING_FILES, VERSION
 
 OWNER_ENV = "EVAL_STAND_ATTEMPT_OWNER"
 MAX_RECEIPT = 1_048_576
@@ -146,6 +146,7 @@ class HarnessRecovery:
         self,
         state: Path,
         *,
+        mounted_state: Path | None = None,
         uid: int | None = None,
         proc_root: Path = Path("/proc"),
         allowed_programs: dict[str, tuple[str, ...]] | None = None,
@@ -166,6 +167,22 @@ class HarnessRecovery:
         self.receipts = self.state / ".harness-recovery"
         self.receipts.mkdir(mode=0o700, exist_ok=True)
         _private(self.receipts, self.uid, True)
+        self.mounted_state = (
+            mounted_state.absolute() if mounted_state is not None else None
+        )
+        self.session_homes = None
+        self.closed_sessions = self.state / ".harness-closed-sessions"
+        if self.mounted_state is not None:
+            volatile, durable = self.mounted_state.resolve(), self.state.resolve()
+            if volatile.is_relative_to(durable) or durable.is_relative_to(volatile):
+                raise RecoveryError("volatile_home_overlaps_durable_state")
+            self.mounted_state.mkdir(mode=0o700, parents=True, exist_ok=True)
+            _private(self.mounted_state, self.uid, True)
+            self.session_homes = self.mounted_state / ".sessions"
+            for directory in (self.session_homes, self.closed_sessions):
+                directory.mkdir(mode=0o700, exist_ok=True)
+                _private(directory, self.uid, True)
+            _sync_directory(self.state)
         if not 0 < per_attempt_s <= 30 or not 0 < startup_s <= 90:
             raise RecoveryError("invalid_recovery_timeout")
         self.proc_root = proc_root
@@ -196,7 +213,7 @@ class HarnessRecovery:
             raise RecoveryError("invalid_recovery_receipt") from None
         if (
             not isinstance(record, dict)
-            or record.get("version") != "v0"
+            or record.get("version") not in ("v0", "v1")
             or record.get("run_id") != run_id
             or not re.fullmatch(r"[0-9a-f]{64}", str(record.get("owner_nonce", "")))
             or record.get("phase")
@@ -207,6 +224,23 @@ class HarnessRecovery:
             )
         ):
             raise RecoveryError("invalid_recovery_receipt")
+        if record["version"] == "v1":
+            session_id, fingerprint = (
+                record.get("session_id"),
+                record.get("request_fingerprint"),
+            )
+            if (
+                not isinstance(session_id, str)
+                or not isinstance(fingerprint, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", fingerprint)
+            ):
+                raise RecoveryError("invalid_recovery_receipt")
+            _valid_id(session_id)
+            if "shared_home" in record and (
+                record["shared_home"] is not True
+                or not re.fullmatch(r"[0-9a-f]{32}", session_id)
+            ):
+                raise RecoveryError("invalid_recovery_receipt")
         return record
 
     def _write(self, record: dict) -> None:
@@ -218,30 +252,105 @@ class HarnessRecovery:
         except OSError:
             raise RecoveryError("recovery_storage_failed") from None
 
-    def _home(self, run_id: str) -> Path:
+    def attempt_home(self, run_id: str, *, mounted: bool = False) -> Path:
         _valid_id(run_id)
-        return self.state / run_id
+        root = self.mounted_state if mounted else self.state
+        if root is None:
+            raise RecoveryError("mounted_home_unavailable")
+        return root / run_id
 
-    def begin_attempt(self, run_id: str, home: Path | None = None) -> dict[str, str]:
-        expected = self._home(run_id)
+    def session_home(self, session_id: str) -> Path:
+        if not re.fullmatch(r"[0-9a-f]{32}", session_id):
+            raise RecoveryError("invalid_session_id")
+        if self.session_homes is None:
+            raise RecoveryError("mounted_home_unavailable")
+        return self.session_homes / session_id
+
+    def session_closed(self, session_id: str) -> bool:
+        self.session_home(session_id)
+        marker = self.closed_sessions / session_id
+        if not marker.exists() and not marker.is_symlink():
+            return False
+        _private(marker, self.uid, False)
+        return True
+
+    def close_session(self, session_id: str) -> None:
+        """Отозвать доступ к чату и удалить его tmpfs после сверки процессов."""
+        home = self.session_home(session_id)
+        if not self.session_closed(session_id):
+            _atomic(self.closed_sessions / session_id, b"closed\n")
+        deadline = time.monotonic() + self.per_attempt_s
+        owner_nonce = None
+        for path in self.receipts.glob("*.json"):
+            if time.monotonic() >= deadline:
+                raise RecoveryError("recovery_timeout")
+            record = self._load(path.stem)
+            if record is None or record.get("session_id") != session_id:
+                continue
+            if record["phase"] != "released":
+                raise RecoveryError("harness_cleanup_unconfirmed")
+            if record.get("shared_home"):
+                owner_nonce = record["owner_nonce"]
+        exists = home.exists() or home.is_symlink()
+        if exists:
+            _private(home, self.uid, True)
+            if owner_nonce is None or any(
+                process.matching or process.foreign_home
+                for process in self._scan(home, owner_nonce, deadline)
+            ):
+                raise RecoveryError("harness_cleanup_unconfirmed")
+        if exists:
+            shutil.rmtree(home)
+            _sync_directory(home.parent)
+
+    def _record_home(self, record: dict) -> Path:
+        if record.get("shared_home"):
+            return self.session_home(record["session_id"])
+        return self.attempt_home(record["run_id"], mounted=record["version"] == "v1")
+
+    def begin_attempt(
+        self,
+        run_id: str,
+        home: Path | None = None,
+        *,
+        mounted: tuple[str, str] | None = None,
+    ) -> dict[str, str]:
+        expected = (
+            self.session_home(mounted[0]) if mounted else self.attempt_home(run_id)
+        )
         if home is not None and home.absolute() != expected:
             raise RecoveryError("unexpected_attempt_home")
         if self._load(run_id) is not None:
             raise RecoveryError("attempt_already_registered")
-        _private(expected, self.uid, True)
-        for name in ("config.toml", "environments.toml"):
-            _private(expected / name, self.uid, False)
+        if mounted is None:
+            _private(expected, self.uid, True)
+            for name in ("config.toml", "environments.toml"):
+                _private(expected / name, self.uid, False)
+        elif expected.exists() or expected.is_symlink():
+            _private(expected, self.uid, True)
         nonce = secrets.token_hex(32)
-        self._write(
-            {
-                "version": "v0",
-                "run_id": run_id,
-                "owner_nonce": nonce,
-                "phase": "registered",
-                "snapshot": None,
-                "cleanup_error": None,
-            }
-        )
+        record = {
+            "version": "v0",
+            "run_id": run_id,
+            "owner_nonce": nonce,
+            "phase": "registered",
+            "snapshot": None,
+            "cleanup_error": None,
+        }
+        if mounted is not None:
+            session_id, fingerprint = mounted
+            _valid_id(session_id)
+            if not re.fullmatch(r"[0-9a-f]{64}", fingerprint):
+                raise RecoveryError("invalid_recovery_receipt")
+            if self.session_closed(session_id):
+                raise RecoveryError("harness_session_closed")
+            record.update(
+                version="v1",
+                session_id=session_id,
+                request_fingerprint=fingerprint,
+                shared_home=True,
+            )
+        self._write(record)
         return {OWNER_ENV: nonce}
 
     @staticmethod
@@ -263,12 +372,20 @@ class HarnessRecovery:
         if record is None:
             return None
         snapshot = record["snapshot"] or self._interrupted()
-        return {
+        status = {
             **snapshot,
             "done": record["phase"] != "registered",
             "released": record["phase"] == "released",
             "cleanup_error": record["cleanup_error"],
         }
+        if record["version"] == "v1":
+            status.update(
+                version="v1",
+                run_id=run_id,
+                session_id=record["session_id"],
+                request_fingerprint=record["request_fingerprint"],
+            )
+        return status
 
     def _process(self, pid: int, home: Path, nonce: str) -> ProcessIdentity | None:
         directory = self.proc_root / str(pid)
@@ -399,7 +516,7 @@ class HarnessRecovery:
         return result
 
     async def _finish(self, record: dict, deadline: float) -> dict:
-        home = self._home(record["run_id"])
+        home = self._record_home(record)
         record = {
             **record,
             "phase": "releasing",
@@ -419,8 +536,13 @@ class HarnessRecovery:
                 return self._unconfirmed(record, "harness_receipt_write_failed")
             if home.exists() or home.is_symlink():
                 _private(home, self.uid, True)
-                shutil.rmtree(home)
-            _sync_directory(self.state)
+                if record.get("shared_home"):
+                    for name in ROUTING_FILES:
+                        (home / name).unlink(missing_ok=True)
+                    _sync_directory(home)
+                else:
+                    shutil.rmtree(home)
+            _sync_directory(home.parent)
             if any(
                 process.matching or process.foreign_home
                 for process in self._scan(home, record["owner_nonce"], deadline)
@@ -455,26 +577,33 @@ class HarnessRecovery:
             raise RecoveryError("unknown_attempt")
         if record["phase"] == "released":
             return self.status(run_id)
-        record = {**record, "snapshot": self._capture(snapshot)}
+        saved = self._capture(snapshot)
+        if record["version"] == "v1":
+            saved["continuation_safe"] = snapshot.get("continuation_safe") is True
+        record = {**record, "snapshot": saved}
         return await self._finish(record, time.monotonic() + self.per_attempt_s)
 
     async def reconcile(self, *, controls_only: bool = False) -> dict[str, dict]:
         deadline = time.monotonic() + self.startup_s
         results = {}
-        for home in self.state.iterdir():
-            if time.monotonic() >= deadline:
-                raise RecoveryError("recovery_timeout")
-            if (
-                _ID.is_valid(home.name)
-                and home.is_dir()
-                and self._load(home.name) is None
-            ):
-                raise RecoveryError("unregistered_attempt_home")
+        session_homes: set[str] = set()
+        for root, version in ((self.state, "v0"), (self.mounted_state, "v1")):
+            if root is None:
+                continue
+            for home in root.iterdir():
+                if time.monotonic() >= deadline:
+                    raise RecoveryError("recovery_timeout")
+                if _ID.is_valid(home.name) and home.is_dir():
+                    record = self._load(home.name)
+                    if record is None or record["version"] != version:
+                        raise RecoveryError("unregistered_attempt_home")
         for path in self.receipts.glob("*.json"):
             if time.monotonic() >= deadline:
                 raise RecoveryError("recovery_timeout")
             run_id = path.stem
             record = self._load(run_id)
+            if record.get("shared_home"):
+                session_homes.add(record["session_id"])
             if record["phase"] == "released":
                 status = self.status(run_id)
             else:
@@ -488,4 +617,13 @@ class HarnessRecovery:
                 if controls_only
                 else status
             )
+            if record["version"] == "v1":
+                results[run_id]["session_id"] = record["session_id"]
+        if self.session_homes is not None:
+            for home in self.session_homes.iterdir():
+                if time.monotonic() >= deadline:
+                    raise RecoveryError("recovery_timeout")
+                if home.name not in session_homes:
+                    raise RecoveryError("unregistered_session_home")
+                _private(home, self.uid, True)
         return results

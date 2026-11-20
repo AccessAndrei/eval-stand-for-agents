@@ -6,10 +6,18 @@ from pathlib import Path, PurePosixPath
 
 import yaml
 
-TASK_IDS = ("B1.1", "B2.1", "B3.1", "B4.1", "B5.1")
-DEFAULT_CATALOG = Path(__file__).resolve().parents[1] / "checkpoint1.yaml"
+from contracts import ContractError, validate
+from contracts.mounted import validate_mounted
+
+from .mounted_files import (
+    MAX_WORKTREE_FILES,
+    WorkspaceTreeError,
+    export_path,
+    read_fixture_tree,
+)
+
 MAX_FIXTURE_BYTES = 1_000_000
-MAX_FIXTURE_FILES = 64
+MAX_FIXTURE_FILES = MAX_WORKTREE_FILES
 B5_COMMAND = "/usr/local/bin/python3 -I -S /work/input/stats.py /work/input/data.csv"
 
 
@@ -24,11 +32,14 @@ class FixtureFile:
 @dataclass(frozen=True)
 class Task:
     id: str
+    baf: str
     directory: Path
     messages: tuple[str, ...]
     timeout_s: int
     fixture_files: tuple[FixtureFile, ...]
     evidence_required: bool = False
+    fixture_directories: tuple[str, ...] = ()
+    answer_file: str = ""
 
     @property
     def checker_path(self) -> Path:
@@ -64,6 +75,8 @@ _UniqueLoader.add_constructor(
 
 def _load_yaml(path: Path) -> dict:
     try:
+        if not path.is_file():
+            raise CatalogError(f"Описание {path.name} должно быть обычным файлом")
         if path.stat().st_size > 65_536:
             raise CatalogError("Описание превышает 64 КиБ")
         value = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueLoader)
@@ -102,7 +115,9 @@ def _paths(value: object) -> tuple[str, ...]:
     return paths
 
 
-def _fixture(directory: Path, data: dict) -> tuple[FixtureFile, ...]:
+def _fixture(
+    directory: Path, data: dict
+) -> tuple[tuple[FixtureFile, ...], tuple[str, ...]]:
     declared = _paths(data.get("fixture_files"))
     protected = _paths(data.get("read_only_files", []))
     if not set(protected).issubset(declared):
@@ -110,24 +125,21 @@ def _fixture(directory: Path, data: dict) -> tuple[FixtureFile, ...]:
     root = directory / "fixture"
     if root.is_symlink() or not root.is_dir():
         raise CatalogError("Каталог fixture отсутствует либо является ссылкой")
-    files = []
-    total = 0
-    for path in root.rglob("*"):
-        if path.is_symlink() or not (path.is_file() or path.is_dir()):
-            raise CatalogError("Fixture содержит ссылку либо специальный файл")
-        if not path.is_file():
-            continue
-        name = path.relative_to(root).as_posix()
-        total += path.stat().st_size
-        if total > MAX_FIXTURE_BYTES or len(files) >= MAX_FIXTURE_FILES:
-            raise CatalogError("Fixture превышает ограничение объёма")
-        content = path.read_bytes()
-        files.append(
-            FixtureFile(name, content, sha256(content).hexdigest(), name in protected)
+    try:
+        tree, contents = read_fixture_tree(
+            root, max_bytes=MAX_FIXTURE_BYTES, max_files=MAX_FIXTURE_FILES
         )
-    if not declared or set(declared) != {file.path for file in files}:
+    except WorkspaceTreeError as error:
+        raise CatalogError(f"Некорректная fixture ({error})") from error
+    if not declared or set(declared) != contents.keys():
         raise CatalogError("Fixture неполна либо содержит необъявленные файлы")
-    return tuple(sorted(files, key=lambda file: file.path))
+    return (
+        tuple(
+            FixtureFile(name, content, sha256(content).hexdigest(), name in protected)
+            for name, content in sorted(contents.items())
+        ),
+        tree.directories,
+    )
 
 
 def _validate_evidence(data: dict, task_id: str) -> bool:
@@ -156,15 +168,16 @@ def _validate_evidence(data: dict, task_id: str) -> bool:
     return True
 
 
-def _load_task(root: Path, entry: dict) -> Task:
-    if not isinstance(entry, dict) or set(entry) != {"id", "directory"}:
-        raise CatalogError("Неверная запись задачи в checkpoint1.yaml")
-    directory = _contained_path(root, entry["directory"])
+def _load_task(root: Path, task_id: str, relative_directory: object) -> Task:
+    directory = _contained_path(root, relative_directory)
     data = _load_yaml(_contained_path(directory, "task.yaml"))
+    baf = data.get("baf")
     messages = data.get("messages")
     timeout = data.get("timeout_s")
-    if data.get("id") != entry["id"] or data.get("baf") != entry["id"][:2]:
-        raise CatalogError("Идентификатор задачи не совпадает с каталогом")
+    if data.get("id") != task_id:
+        raise CatalogError("Идентификатор задачи не совпадает с манифестом")
+    if not isinstance(baf, str) or not baf.strip():
+        raise CatalogError("Категория БАФ должна быть непустой строкой")
     if (
         not isinstance(messages, list)
         or not messages
@@ -177,28 +190,66 @@ def _load_task(root: Path, entry: dict) -> Task:
         raise CatalogError("Недопустимый timeout_s")
     if not _contained_path(directory, "check.py").is_file():
         raise CatalogError("У задачи отсутствует доверенный check.py")
-    _relative_path(data.get("answer_file"))
+    answer_file = _relative_path(data.get("answer_file"))
+    fixture_files, fixture_directories = _fixture(directory, data)
     return Task(
-        entry["id"],
-        directory,
-        tuple(messages),
-        timeout,
-        _fixture(directory, data),
-        _validate_evidence(data, entry["id"]),
+        id=task_id,
+        baf=baf,
+        directory=directory,
+        messages=tuple(messages),
+        timeout_s=timeout,
+        fixture_files=fixture_files,
+        evidence_required=_validate_evidence(data, task_id),
+        fixture_directories=fixture_directories,
+        answer_file=answer_file,
     )
 
 
-def load_checkpoint(path: Path = DEFAULT_CATALOG) -> tuple[Task, ...]:
-    """Проверить все пять описаний и скопировать в память только fixture."""
+def load_dataset(path: Path, *, mounted: bool = False) -> tuple[Task, ...]:
+    """Проверить весь манифест и загрузить исходные файлы до запуска."""
     path = path.resolve()
     data = _load_yaml(path)
     entries = data.get("tasks")
     if type(data.get("version")) is not int or data["version"] != 0:
-        raise CatalogError("Неподдерживаемая версия каталога")
-    if not isinstance(entries, list) or any(
-        not isinstance(item, dict) for item in entries
-    ):
-        raise CatalogError("Нет списка задач")
-    if tuple(item.get("id") for item in entries) != TASK_IDS:
-        raise CatalogError("Нужны ровно B1.1–B5.1 в установленном порядке")
-    return tuple(_load_task(path.parent, entry) for entry in entries)
+        raise CatalogError("Неподдерживаемая версия манифеста")
+    if not isinstance(entries, list) or not entries:
+        raise CatalogError("Датасет должен содержать непустой список задач")
+    directories: dict[str, object] = {}
+    for entry in entries:
+        if not isinstance(entry, dict) or set(entry) != {"id", "directory"}:
+            raise CatalogError("Запись датасета должна содержать id и directory")
+        task_id = entry["id"]
+        try:
+            validate("task_id", task_id)
+        except ContractError as error:
+            raise CatalogError("Недопустимый идентификатор задачи") from error
+        if task_id in directories:
+            raise CatalogError("Идентификаторы задач в датасете повторяются")
+        directories[task_id] = entry["directory"]
+    tasks = tuple(
+        _load_task(path.parent, task_id, directory)
+        for task_id, directory in directories.items()
+    )
+    if mounted:
+        for task in tasks:
+            try:
+                export_path(task.answer_file)
+            except WorkspaceTreeError as error:
+                raise CatalogError(
+                    f"Задача {task.id} задаёт недоступный путь ответа"
+                ) from error
+            try:
+                validate_mounted(
+                    "run_start",
+                    {
+                        "run_id": "0" * 32,
+                        "task_id": task.id,
+                        "prompt": "\n".join(task.messages),
+                        "timeout_s": task.timeout_s,
+                    },
+                )
+            except ContractError as error:
+                raise CatalogError(
+                    f"Задача {task.id} не соответствует схеме запуска v1"
+                ) from error
+    return tasks

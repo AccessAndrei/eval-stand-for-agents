@@ -6,6 +6,8 @@ import json
 import re
 import secrets
 from copy import deepcopy
+from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +16,34 @@ from services.common.storage import atomic_json
 
 class BudgetError(RuntimeError):
     """Превышение бюджета либо неопределённый расход."""
+
+
+@dataclass(frozen=True)
+class RunBinding:
+    """Идентичность запуска в сессии, сохранённая до выдачи полномочия."""
+
+    session_id: str
+    run_id: str
+
+    def __post_init__(self) -> None:
+        if any(
+            not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{32}", value)
+            for value in (self.session_id, self.run_id)
+        ):
+            raise ValueError("invalid_run_binding")
+
+    @classmethod
+    def read(cls, value: object) -> RunBinding:
+        if (
+            not isinstance(value, dict)
+            or value.keys() != {"version", "session_id", "run_id"}
+            or value["version"] != "v1"
+        ):
+            raise ValueError("invalid_run_binding")
+        return cls(value["session_id"], value["run_id"])
+
+    def public(self) -> dict[str, str]:
+        return {"version": "v1", "session_id": self.session_id, "run_id": self.run_id}
 
 
 class Ledger:
@@ -26,14 +56,29 @@ class Ledger:
         token: str | None = None,
         profile_snapshot: dict[str, Any] | None = None,
         *,
+        binding: RunBinding | None = None,
         mode: str | None = None,
         output_limit: int | None = None,
     ) -> None:
         self.path = path
+        self._active_grant: str | None = None
         if path.exists():
             self.data = json.loads(path.read_text(encoding="utf-8"))
-            if self.data["profile"] != profile:
+            self.binding = (
+                RunBinding.read(self.data["binding"])
+                if "binding" in self.data
+                else None
+            )
+            if self.data["profile"] != profile or (
+                binding is not None and self.binding != binding
+            ):
                 raise ValueError("run_conflict")
+            if self.binding is not None and (
+                "token" in self.data
+                or not isinstance(self.data.get("token_sha256"), str)
+                or not re.fullmatch(r"[0-9a-f]{64}", self.data["token_sha256"])
+            ):
+                raise ValueError("invalid_run_grant_verifier")
             self.data.setdefault("mode", "strict")
             previous = self.data.get("profile_snapshot") or {}
             self.data.setdefault("output_limit", previous.get("output_limit", 30_000))
@@ -42,6 +87,7 @@ class Ledger:
             ):
                 raise ValueError("run_conflict")
         else:
+            self.binding = binding
             snapshot = profile_snapshot or {}
             mode = snapshot.get("budget_mode", "strict") if mode is None else mode
             output_limit = (
@@ -55,11 +101,11 @@ class Ledger:
                 raise ValueError("invalid_budget_mode")
             if type(output_limit) is not int or not 1 <= output_limit <= 30_000:
                 raise ValueError("invalid_output_limit")
+            grant = token or secrets.token_urlsafe(32)
             self.data = {
                 "profile": profile,
                 "mode": mode,
                 "output_limit": output_limit,
-                "token": token or secrets.token_urlsafe(32),
                 "input": 0,
                 "output": 0,
                 "cached": 0,
@@ -69,7 +115,27 @@ class Ledger:
                 "requests": 0,
                 "profile_snapshot": deepcopy(profile_snapshot),
             }
+            if binding is not None:
+                self.data["binding"] = binding.public()
+                self.data["token_sha256"] = sha256(grant.encode()).hexdigest()
+                self._active_grant = grant
+            else:
+                self.data["token"] = grant
             self.save()
+
+    @property
+    def inference_token(self) -> str | None:
+        return self.data["token"] if self.binding is None else self._active_grant
+
+    def matches_v1_grant(self, authorization: str) -> bool:
+        scheme, _, grant = authorization.partition(" ")
+        if scheme != "Bearer" or not grant:
+            return False
+        try:
+            proof = sha256(grant.encode()).hexdigest()
+        except UnicodeError:
+            return False
+        return secrets.compare_digest(self.data["token_sha256"], proof)
 
     def save(self) -> None:
         atomic_json(self.path, self.data)
@@ -156,10 +222,12 @@ class Ledger:
 
     def fail(self, code: str) -> None:
         self.data["error"] = self.data["error"] or code
+        self._active_grant = None
         self.save()
 
     def close(self) -> None:
         self.data["closed"] = True
+        self._active_grant = None
         self.save()
 
     def tokens(self) -> dict[str, Any]:

@@ -1,0 +1,28 @@
+{
+  "Description": "Драйвер SSHFS для рабочих областей eval-stand-for-agents",
+  "Entrypoint": ["/usr/bin/tini", "--", "/usr/local/bin/python3", "/volume_driver.py"],
+  "Interface": {
+    "Socket": "workspace.sock",
+    "Types": ["docker.volumedriver/1.0"]
+  },
+  "Linux": {
+    "AllowAllDevices": false,
+    "Capabilities": ["CAP_SYS_ADMIN"],
+    "Devices": [{"Name": "fuse", "Description": "Устройство FUSE", "Path": "/dev/fuse"}]
+  },
+  "Mounts": [
+    {
+      "Name": "ipc",
+      "Description": "Сокеты обратных туннелей и ключи экспортов",
+      "Source": "/ipc",
+      "Destination": "/ipc",
+      "Type": "bind",
+      "Options": ["rbind", "ro", "rprivate"],
+      "Settable": ["source"]
+    }
+  ],
+  "Network": {"Type": "none"},
+  "PropagatedMount": "/mnt/volumes",
+  "PidHost": false,
+  "IpcHost": false
+}

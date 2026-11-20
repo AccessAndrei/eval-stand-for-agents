@@ -6,8 +6,11 @@ x-build: &build
   args:
     SERVICE_UID: ${LOCAL_UID:-1000}
     SERVICE_GID: ${LOCAL_GID:-1000}
+
+x-build-with-codex: &build-with-codex
+  <<: *build
   additional_contexts:
-    codex-source: ./build/codex-artifact
+    codex-source: service:codex-source
 
 x-service: &service
   platform: ${DOCKER_PLATFORM:-linux/arm64}
@@ -50,19 +53,33 @@ services:
         source: ${RESULTS_PATH:-./results}
         target: /results
         bind: {create_host_path: false}
-    command: [--profile, api, --results, /results]
     stop_grace_period: 100s
 
-  # Одноразовая проверка собранного образа, не пятый постоянный сервис.
+  codex-source:
+    <<: *service
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.codex
+      target: runtime
+    image: eval-stand-codex:0.159.3
+    pull_policy: never
+    network_mode: none
+    mem_limit: 64000000
+    memswap_limit: 64000000
+    command: ["--version"]
+
+  # Одноразовая проверка образа сандбокса.
   sandbox-image:
     <<: *service
-    build: {<<: *build, target: sandbox}
+    build: {<<: *build-with-codex, target: sandbox}
     image: eval-stand-sandbox:0.159.3
     pull_policy: never
     network_mode: none
     mem_limit: 64000000
     memswap_limit: 64000000
     command: ["/usr/local/bin/codex", "--version"]
+    depends_on:
+      codex-source: {condition: service_completed_successfully}
 
   gateway:
     <<: *service
@@ -74,20 +91,23 @@ services:
       MANAGER_TOKEN: ${MANAGER_TOKEN:-}
       HARNESS_TOKEN: ${HARNESS_TOKEN:-}
       PROXY_TOKEN: ${PROXY_TOKEN:-}
+      BROKER_TOKEN: ${BROKER_TOKEN:-}
+      WORKSPACE_SSH_PORT: ${WORKSPACE_SSH_PORT:-2222}
       MANAGER_URL: http://sandbox-manager:8081
       HARNESS_URL: http://harness:8083
       PROXY_URL: http://llm-proxy:8000
+      BROKER_URL: http://workspace-broker:8084
       GATEWAY_STATE: /state
       STATE_LIMIT_BYTES: ${STATE_LIMIT_BYTES:-1000000000}
-      PROVENANCE_FILE: /run/provenance.json
+      PROVENANCE_FILE: /runtime-provenance/provenance.json
     ports: ["127.0.0.1:${GATEWAY_PORT:-8080}:8080"]
     volumes:
       - gateway-state:/state
-      - type: bind
-        source: ${PROVENANCE_PATH:-./results/source-build/provenance.runtime.json}
-        target: /run/provenance.json
+      - type: volume
+        source: runtime-provenance
+        target: /runtime-provenance
         read_only: true
-        bind: {create_host_path: false}
+        volume: {nocopy: true}
     depends_on:
       harness: {condition: service_healthy}
       sandbox-manager: {condition: service_healthy}
@@ -99,7 +119,7 @@ services:
 
   harness:
     <<: *service
-    build: {<<: *build, target: harness}
+    build: {<<: *build-with-codex, target: harness}
     networks: [control]
     mem_limit: 512000000
     memswap_limit: 512000000
@@ -118,6 +138,29 @@ services:
       <<: *health
       test: [CMD, python, /app/scripts/healthcheck.py, "http://127.0.0.1:8083/health", --token-env, HARNESS_TOKEN, --codex]
 
+  workspace-broker:
+    <<: *service
+    build: {<<: *build, target: workspace-broker}
+    networks: [control, workspace-ingress]
+    mem_limit: 128000000
+    memswap_limit: 128000000
+    pids_limit: 32
+    environment:
+      BROKER_TOKEN: ${BROKER_TOKEN:-}
+      BROKER_STATE: /state/workspace-broker
+      BROKER_IPC: /ipc
+    ports: ["127.0.0.1:${WORKSPACE_SSH_PORT:-2222}:2222"]
+    volumes:
+      - broker-state:/state
+      - type: volume
+        source: workspace-ipc
+        target: /ipc
+        volume: {nocopy: true}
+    stop_grace_period: 30s
+    healthcheck:
+      <<: *health
+      test: [CMD, python, /app/scripts/healthcheck.py, "http://127.0.0.1:8084/health", --token-env, BROKER_TOKEN]
+
   sandbox-manager:
     <<: *service
     build: {<<: *build, target: manager}
@@ -127,14 +170,23 @@ services:
       PROJECT_ID: ${PROJECT_ID:-eval-stand}
       MANAGER_STATE: /state
       SANDBOX_IMAGE: eval-stand-sandbox:0.159.3
+      CODEX_SOURCE_IMAGE: eval-stand-codex:0.159.3
+      RUNTIME_PROVENANCE_FILE: /runtime-provenance/provenance.json
+      WORKSPACE_IPC_VOLUME: ${COMPOSE_PROJECT_NAME:-eval-stand}-workspace-ipc
     volumes:
       - manager-state:/state
+      - type: volume
+        source: runtime-provenance
+        target: /runtime-provenance
+        volume: {nocopy: true}
       - type: bind
         source: ${DOCKER_SOCKET:-/var/run/docker.sock}
         target: /var/run/docker.sock
         bind: {create_host_path: false}
     depends_on:
+      codex-source: {condition: service_completed_successfully}
       sandbox-image: {condition: service_completed_successfully}
+      workspace-broker: {condition: service_healthy}
     stop_grace_period: 100s
     healthcheck:
       <<: *health
@@ -161,10 +213,21 @@ networks:
     driver_opts:
       com.docker.network.bridge.enable_ip_masquerade: "false"
       com.docker.network.bridge.enable_icc: "false"
+  workspace-ingress:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+      com.docker.network.bridge.enable_icc: "false"
   proxy-egress: {}
 
 volumes:
+  broker-state:
   gateway-state:
   harness-state:
   manager-state:
   proxy-state:
+  runtime-provenance:
+  workspace-ipc:
+    name: ${COMPOSE_PROJECT_NAME:-eval-stand}-workspace-ipc
+    labels:
+      io.eval-stand.role: workspace-ipc

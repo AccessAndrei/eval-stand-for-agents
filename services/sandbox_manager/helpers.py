@@ -58,6 +58,37 @@ def quiesce() -> None:
     raise RuntimeError("agent_processes_remain")
 
 
+def verify_supervisor_namespace() -> None:
+    supervisor = Path("/proc/1/status").read_text()
+    if (
+        not any(
+            line.startswith("Uid:") and line.split()[1] == "1001"
+            for line in supervisor.splitlines()
+        )
+        or not Path("/proc/1/cmdline").read_bytes().endswith(b"\0idle\0")
+        or os.stat("/proc/1/ns/pid").st_ino != os.stat("/proc/self/ns/pid").st_ino
+    ):
+        raise RuntimeError("sandbox_supervisor_unconfirmed")
+
+
+def kill_frozen() -> None:
+    verify_supervisor_namespace()
+    for pid in agent_processes():
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+
+def verify_quiescent() -> None:
+    verify_supervisor_namespace()
+    deadline = time.monotonic() + 3
+    while agent_processes():
+        if time.monotonic() >= deadline:
+            raise RuntimeError("agent_processes_remain")
+        time.sleep(0.02)
+
+
 def safe_path(raw: str) -> PurePosixPath:
     path = PurePosixPath(raw)
     if path.is_absolute() or str(path) != raw or ".." in path.parts:
@@ -131,5 +162,9 @@ if __name__ == "__main__":
         )
     elif action == "quiesce":
         quiesce()
+    elif action == "kill_frozen":
+        kill_frozen()
+    elif action == "verify_quiescent":
+        verify_quiescent()
     else:
         raise ValueError("unknown_action")

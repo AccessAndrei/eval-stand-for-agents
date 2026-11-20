@@ -1,0 +1,12 @@
+[
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"cat /work/spec.md\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "custom_tool_call",
+    "name": "apply_patch",
+    "input": "*** Begin Patch\n*** Add File: /work/slug.py\n+import re\n+\n+\n+def slugify(text: str) -> str:\n+    return '-'.join(re.findall(r'[A-Za-z0-9]+', text)).lower()\n*** End Patch"
+  }
+]

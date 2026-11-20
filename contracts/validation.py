@@ -1,4 +1,4 @@
-"""Структурные и межполевые ограничения контрактов первого чекпоинта."""
+"""Структурные и межполевые ограничения контрактов прогонов БАФ."""
 
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ from typing import Any
 from jsonschema import Draft202012Validator, FormatChecker
 
 MAX_FILES_BYTES = 1_048_576
-TASK_IDS = ("B1.1", "B2.1", "B3.1", "B4.1", "B5.1")
 MESSAGE_KINDS = frozenset(
     (
+        "task_id",
         "launch",
         "status",
         "event",
@@ -30,6 +30,7 @@ MESSAGE_KINDS = frozenset(
         "connect",
         "manager_status",
         "evidence",
+        "provenance",
     )
 )
 
@@ -65,7 +66,8 @@ def validate(kind: str, payload: Any) -> None:
         encoded.encode("utf-8")
     except (TypeError, ValueError, UnicodeError) as exc:
         raise ContractError("Ожидалось корректное UTF-8 JSON-сообщение") from exc
-    _require(len(encoded) <= 2_500_000, "Сообщение превышает предел размера")
+    if kind != "report":
+        _require(len(encoded) <= 2_500_000, "Сообщение превышает предел размера")
     error = next(_validator(kind).iter_errors(payload), None)
     if error is not None:
         # ValidationError.message может содержать секрет из отклонённого поля.
@@ -315,7 +317,10 @@ def _task_success(row: dict[str, Any]) -> bool:
 def _validate_report(report: dict[str, Any]) -> None:
     _validate_times(report)
     rows = report["tasks"]
-    _require(tuple(row["task_id"] for row in rows) == TASK_IDS, "Нужны ровно B1.1–B5.1")
+    _require(
+        len({row["task_id"] for row in rows}) == len(rows),
+        "Повторяющиеся идентификаторы задач",
+    )
     for row in rows:
         _validate_task_report(row)
         if row["result"] is not None:
@@ -327,7 +332,10 @@ def _validate_report(report: dict[str, Any]) -> None:
     wrong = sum(row["checker_status"] == "failed" for row in rows)
     _require(report["evaluated"] == evaluated, "Неверное число оценённых ответов")
     _require(report["wrong_answers"] == wrong, "Неверное число неправильных ответов")
-    _require(report["technical_skips"] == 5 - evaluated, "Неверное число пропусков")
+    _require(
+        report["technical_skips"] == len(rows) - evaluated,
+        "Неверное число пропусков",
+    )
     _require(report["success"] == all(map(_task_success, rows)), "Неверный итог набора")
     model = report["course_model_status"]
     if model["status"] == "confirmed":

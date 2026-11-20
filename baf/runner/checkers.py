@@ -10,6 +10,17 @@ from pathlib import Path
 from baf.runner.catalog import Task
 from baf.runner.evidence import validate_evidence
 
+# Изолированный Python игнорирует PYTHONPATH. Добавляем только каталог кода
+# раннера, чтобы чекеры работали и в отдельно подключённом датасете.
+_CHECKER_ENTRYPOINT = """
+import runpy
+import sys
+
+sys.path.insert(0, sys.argv.pop(1))
+sys.argv.pop(0)
+runpy.run_path(sys.argv[0], run_name="__main__")
+"""
+
 
 def _outcome(status: str, reason: str, passed: bool | None = None) -> dict:
     return {"checker_status": status, "pass": passed, "reason": reason}
@@ -24,20 +35,25 @@ def _parse_result(stdout: str, returncode: int) -> dict:
         result = json.loads(stdout)
     except (ValueError, RecursionError):
         return _outcome("checker_error", "Чекер не вернул допустимый JSON")
-    if not isinstance(result, dict) or not isinstance(result.get("reason"), str):
+    reason = result.get("reason") if isinstance(result, dict) else None
+    if not isinstance(reason, str) or not reason:
         return _outcome("checker_error", "Неверный формат результата чекера")
+    try:
+        reason.encode("utf-8")
+    except UnicodeError:
+        return _outcome(
+            "checker_error", "Объяснение чекера содержит недопустимый текст"
+        )
     if (
         result.get("checker_status") == "not_run_evidence_incomplete"
         and result.get("pass") is None
     ):
-        return _outcome("not_run_evidence_incomplete", result["reason"])
+        return _outcome("not_run_evidence_incomplete", reason)
     if type(result.get("pass")) is not bool:
         return _outcome(
             "checker_error", "В результате чекера отсутствует логическое pass"
         )
-    return _outcome(
-        "passed" if result["pass"] else "failed", result["reason"], result["pass"]
-    )
+    return _outcome("passed" if result["pass"] else "failed", reason, result["pass"])
 
 
 def run_checker(
@@ -61,7 +77,15 @@ def run_checker(
     payload = json.dumps(evidence, ensure_ascii=False)
     if len(payload.encode("utf-8")) > 1_000_000:
         return _outcome("not_run_evidence_incomplete", "Превышен объём доказательства")
-    command = [sys.executable, "-I", str(task.checker_path), str(workdir.resolve())]
+    command = [
+        sys.executable,
+        "-I",
+        "-c",
+        _CHECKER_ENTRYPOINT,
+        str(Path(__file__).resolve().parents[2]),
+        str(task.checker_path),
+        str(workdir.resolve()),
+    ]
     if task.evidence_required:
         command.append(run_id)
     try:

@@ -8,6 +8,8 @@ from urllib.parse import urlsplit
 
 import aiohttp
 
+MAX_RESPONSE_BYTES = 4_000_000
+
 
 class GatewayError(RuntimeError):
     def __init__(self, code: str) -> None:
@@ -65,7 +67,7 @@ class GatewayClient:
                 ) as response:
                     body = bytearray()
                     async for chunk in response.content.iter_chunked(65_536):
-                        if len(body) + len(chunk) > 4_000_000:
+                        if len(body) + len(chunk) > MAX_RESPONSE_BYTES:
                             raise TransportError("response_too_large")
                         body.extend(chunk)
             try:

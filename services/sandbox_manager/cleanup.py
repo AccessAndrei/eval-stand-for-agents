@@ -2,21 +2,23 @@
 
 import asyncio
 import json
-import os
-from pathlib import Path
 
-from .manager import Manager
+from .server import manager_from_environment
 
 
 async def cleanup() -> bool:
-    root = Path(os.environ.get("MANAGER_STATE", "/state/manager"))
-    manager = Manager(root, os.environ["PROJECT_ID"], os.environ["SANDBOX_IMAGE"])
+    manager = manager_from_environment()
     async with asyncio.timeout(90):
+        if (
+            manager.workspace_driver is not None
+            and manager.workspace_driver.state.is_file()
+        ):
+            await manager.workspace_driver.start_existing()
         await manager.recover()
         await manager.shutdown()
     return not manager.persistence_failed and all(
         json.loads(path.read_text())["cleanup_status"] == "success"
-        for path in root.glob("*.json")
+        for path in manager.root.glob("*.json")
     )
 
 

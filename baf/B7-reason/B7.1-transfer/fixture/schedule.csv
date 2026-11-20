@@ -1,0 +1,5 @@
+service,city,event,time
+R101,X,departure,08:25
+R101,Y,arrival,09:10
+R202,Y,departure,09:45
+R202,Z,arrival,10:35

@@ -1,4 +1,4 @@
-"""Пять последовательных попыток; серверные исходы сохраняются неизменными."""
+"""Последовательный прогон датасета с отчётом по каждой задаче."""
 
 import time
 import uuid
@@ -6,13 +6,21 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from baf.runner.artifacts import RUN_RESERVE_BYTES, ArtifactError, save_bundle
-from baf.runner.catalog import TASK_IDS, CatalogError, Task, load_checkpoint
+from baf.runner.catalog import CatalogError, Task
 from baf.runner.checkers import run_checker
-from baf.runner.transport import GatewayError, Transport, TransportError
+from baf.runner.transport import (
+    MAX_RESPONSE_BYTES,
+    GatewayError,
+    Transport,
+    TransportError,
+)
 from contracts import ContractError, fingerprint, validate
 from services.common.storage import Storage, StorageBudgetExceeded
 
-REPORT_RESERVE_BYTES = 1_048_576
+REPORT_HEADER_BYTES = 4_096
+# В строку входит результат из ответа gateway и локальные поля. Причина
+# чекера ограничена 2048 символами (до 6 байт на символ при JSON-экранировании).
+REPORT_ROW_BYTES = MAX_RESPONSE_BYTES + 16_384
 CONTINUE_EXECUTION = {"success", "command_error", "timeout", "budget_exceeded"}
 
 
@@ -235,7 +243,7 @@ def _report(batch_id: str, profile: str, started: str, rows: list[dict]) -> dict
         "tasks": rows,
         "evaluated": evaluated,
         "wrong_answers": sum(row["checker_status"] == "failed" for row in rows),
-        "technical_skips": 5 - evaluated,
+        "technical_skips": len(rows) - evaluated,
         "success": success,
         "course_model_status": {
             "status": "unconfirmed",
@@ -252,19 +260,18 @@ def run_batch(
     *,
     profile: str,
     results: Path,
+    tasks: tuple[Task, ...],
     storage_limit: int = 1_000_000_000,
-    tasks: tuple[Task, ...] | None = None,
 ) -> tuple[Path, dict]:
-    """Сохранить ровно пять исходов, включая незапущенные, без перезаписи истории."""
-    tasks = load_checkpoint() if tasks is None else tasks
-    if tuple(task.id for task in tasks) != TASK_IDS:
-        raise CatalogError("Нужны ровно B1.1–B5.1")
+    """Сохранить исход для каждой задачи, включая незапущенные."""
+    if not tasks or len({task.id for task in tasks}) != len(tasks):
+        raise CatalogError("Нужен непустой набор задач с уникальными ID")
     for task in tasks:
         launch_request(task, "validation", profile)
     batch_id = uuid.uuid4().hex
     started = now()
     storage = Storage(results, storage_limit)
-    reserve = storage.reserve("batch-" + batch_id, REPORT_RESERVE_BYTES)
+    reserve = storage.reserve("batch-" + batch_id, report_reserve_bytes(len(tasks)))
     batch_dir = results / batch_id
     batch_dir.mkdir(mode=0o700)
     rows = [_empty_row(task) for task in tasks]
@@ -297,3 +304,7 @@ def run_batch(
     report_path = batch_dir / "report.json"
     storage.finalize(reserve, report_path, report)
     return report_path, report
+
+
+def report_reserve_bytes(task_count: int) -> int:
+    return REPORT_HEADER_BYTES + REPORT_ROW_BYTES * task_count

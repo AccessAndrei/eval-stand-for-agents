@@ -1,0 +1,12 @@
+[
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"cat /work/sales/*.csv\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "custom_tool_call",
+    "name": "apply_patch",
+    "input": "*** Begin Patch\n*** Add File: /work/answer.txt\n+1025\n*** End Patch"
+  }
+]

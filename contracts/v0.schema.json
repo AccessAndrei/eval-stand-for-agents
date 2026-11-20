@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:eval-stand-for-agents:contracts:v0",
-  "title": "Контракты одного прогона и набора первого чекпоинта",
+  "title": "Контракты одного прогона и отчёта по датасету БАФ",
   "$comment": "Валидация межполевых инвариантов дополнена contracts.validate. Авторизация проверяется транспортом до чтения и изменения состояния. Нативный протокол Codex не переопределяется.",
   "$defs": {
     "id": {
@@ -21,13 +21,13 @@
       "pattern": "^[0-9a-f]{64}$"
     },
     "task_id": {
-      "enum": [
-        "B1.1",
-        "B2.1",
-        "B3.1",
-        "B4.1",
-        "B5.1"
-      ]
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9]",
+      "not": {
+        "pattern": "[^A-Za-z0-9_.-]"
+      }
     },
     "profile": {
       "type": "string",
@@ -1057,23 +1057,19 @@
           "items": {
             "$ref": "#/$defs/task_report"
           },
-          "maxItems": 5,
-          "minItems": 5
+          "minItems": 1
         },
         "evaluated": {
           "type": "integer",
-          "minimum": 0,
-          "maximum": 5
+          "minimum": 0
         },
         "wrong_answers": {
           "type": "integer",
-          "minimum": 0,
-          "maximum": 5
+          "minimum": 0
         },
         "technical_skips": {
           "type": "integer",
-          "minimum": 0,
-          "maximum": 5
+          "minimum": 0
         },
         "success": {
           "type": "boolean"

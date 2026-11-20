@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:eval-stand-for-agents:mounted-report:v1",
+  "title": "Отчёт датасета БАФ по смонтированным сессиям",
+  "type": "object",
+  "properties": {
+    "version": {"const": "v1"},
+    "batch_id": {"$ref": "https://eval-stand.local/contracts/mounted-v1#/$defs/id"},
+    "provider_profile": {"$ref": "https://eval-stand.local/contracts/mounted-v1#/$defs/profile"},
+    "started_at": {"$ref": "#/$defs/timestamp"},
+    "finished_at": {"$ref": "#/$defs/timestamp"},
+    "tasks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/task"}},
+    "evaluated": {"type": "integer", "minimum": 0},
+    "wrong_answers": {"type": "integer", "minimum": 0},
+    "technical_skips": {"type": "integer", "minimum": 0},
+    "success": {"type": "boolean"},
+    "course_model_status": {"$ref": "urn:eval-stand-for-agents:contracts:v0#/$defs/course_model_status"}
+  },
+  "required": [
+    "version", "batch_id", "provider_profile", "started_at", "finished_at", "tasks",
+    "evaluated", "wrong_answers", "technical_skips", "success", "course_model_status"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "timestamp": {"type": "string", "format": "date-time"},
+    "nullable_timestamp": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/timestamp"}]},
+    "nullable_id": {
+      "anyOf": [
+        {"type": "null"},
+        {"$ref": "https://eval-stand.local/contracts/mounted-v1#/$defs/id"}
+      ]
+    },
+    "reason": {"type": ["string", "null"], "minLength": 1, "maxLength": 2048},
+    "code": {"type": "string", "maxLength": 80, "pattern": "^[a-z][a-z0-9_]*$"},
+    "error": {
+      "type": "object",
+      "properties": {
+        "stage": {"$ref": "#/$defs/code"},
+        "code": {"$ref": "#/$defs/code"},
+        "message": {"type": "string", "minLength": 1, "maxLength": 2048}
+      },
+      "required": ["stage", "code", "message"],
+      "additionalProperties": false
+    },
+    "cleanup": {
+      "type": "object",
+      "properties": {
+        "server_status": {"enum": [null, "success", "failed"]},
+        "export_drained": {"type": "boolean"},
+        "tunnel_closed": {"type": "boolean"},
+        "error": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/code"}]}
+      },
+      "required": ["server_status", "export_drained", "tunnel_closed", "error"],
+      "additionalProperties": false
+    },
+    "task": {
+      "type": "object",
+      "properties": {
+        "task_id": {"$ref": "urn:eval-stand-for-agents:contracts:v0#/$defs/task_id"},
+        "session_id": {"$ref": "#/$defs/nullable_id"},
+        "run_id": {"$ref": "#/$defs/nullable_id"},
+        "result": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/result"}]},
+        "started_at": {"$ref": "#/$defs/nullable_timestamp"},
+        "finished_at": {"$ref": "#/$defs/nullable_timestamp"},
+        "duration_s": {"type": ["number", "null"], "minimum": 0},
+        "files_status": {"enum": ["not_run", "confirmed", "unconfirmed", "unsafe"]},
+        "cleanup_status": {"enum": ["not_run", "success", "failed"]},
+        "cleanup": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/cleanup"}]},
+        "evidence_status": {"enum": ["not_run", "not_required", "complete", "incomplete"]},
+        "checker_status": {
+          "enum": [
+            "not_run", "passed", "failed", "checker_error",
+            "not_run_collection_failed", "not_run_execution_failed", "not_run_evidence_incomplete"
+          ]
+        },
+        "checker_reason": {"$ref": "#/$defs/reason"},
+        "skip_reason": {"$ref": "#/$defs/reason"},
+        "trace_path": {"type": ["string", "null"], "pattern": "^[0-9a-f]{32}/trace\\.json$"},
+        "artifact_path": {"type": ["string", "null"], "pattern": "^[0-9a-f]{32}/work$"},
+        "errors": {"type": "array", "items": {"$ref": "#/$defs/error"}}
+      },
+      "required": [
+        "task_id", "session_id", "run_id", "result", "started_at", "finished_at", "duration_s",
+        "files_status", "cleanup_status", "cleanup", "evidence_status", "checker_status",
+        "checker_reason", "skip_reason", "trace_path", "artifact_path", "errors"
+      ],
+      "additionalProperties": false
+    },
+    "evidence_id": {"type": "string", "pattern": "^[A-Za-z0-9_.-]{1,128}$"},
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "version": {"const": "v1"},
+        "session_id": {"$ref": "https://eval-stand.local/contracts/mounted-v1#/$defs/id"},
+        "run_id": {"$ref": "https://eval-stand.local/contracts/mounted-v1#/$defs/id"},
+        "codex_version": {"$ref": "#/$defs/evidence_id"},
+        "thread_id": {"$ref": "#/$defs/evidence_id"},
+        "turn_id": {"$ref": "#/$defs/evidence_id"},
+        "events": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {"$ref": "#/$defs/evidence_id"},
+              "phase": {"$ref": "#/$defs/evidence_id"},
+              "thread_id": {"$ref": "#/$defs/evidence_id"},
+              "turn_id": {"$ref": "#/$defs/evidence_id"},
+              "item_id": {"$ref": "#/$defs/evidence_id"},
+              "session_id": {"$ref": "#/$defs/evidence_id"},
+              "run_id": {"$ref": "#/$defs/evidence_id"},
+              "command_kind": {"$ref": "#/$defs/evidence_id"},
+              "source": {"$ref": "#/$defs/evidence_id"},
+              "exit_code": {"type": "integer"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["events"],
+      "additionalProperties": false
+    },
+    "result": {
+      "allOf": [
+        {"$ref": "https://eval-stand.local/contracts/mounted-v1#/$defs/run_result"},
+        {
+          "type": "object",
+          "properties": {
+            "trace_id": {"$ref": "https://eval-stand.local/contracts/mounted-v1#/$defs/id"},
+            "task_id": {"$ref": "urn:eval-stand-for-agents:contracts:v0#/$defs/task_id"},
+            "provider_profile": {"$ref": "https://eval-stand.local/contracts/mounted-v1#/$defs/profile"},
+            "model": {"type": ["string", "null"], "minLength": 1, "maxLength": 128},
+            "provider_snapshot": {
+              "anyOf": [
+                {"type": "null"},
+                {"$ref": "urn:eval-stand-for-agents:contracts:v0#/$defs/provider_snapshot"}
+              ]
+            },
+            "execution_status": {"$ref": "urn:eval-stand-for-agents:contracts:v0#/$defs/execution_status"},
+            "errors": {"type": "array", "items": {"$ref": "#/$defs/error"}},
+            "tokens": {"$ref": "urn:eval-stand-for-agents:contracts:v0#/$defs/tokens"},
+            "provenance": {"$ref": "urn:eval-stand-for-agents:contracts:v0#/$defs/provenance"},
+            "evidence": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/evidence"}]},
+            "started_at": {"$ref": "#/$defs/timestamp"},
+            "finished_at": {"$ref": "#/$defs/timestamp"},
+            "duration_s": {"type": "number", "minimum": 0},
+            "last_seq": {"type": "integer", "minimum": 1}
+          },
+          "required": [
+            "trace_id", "task_id", "provider_profile", "model", "provider_snapshot",
+            "evidence", "started_at", "finished_at", "duration_s", "last_seq"
+          ]
+        }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

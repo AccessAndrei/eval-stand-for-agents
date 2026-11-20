@@ -34,6 +34,8 @@ def authenticated(token: str) -> Callable:
         try:
             return await handler(request)
         except ContractError as error:
+            if request.path.startswith("/v1/"):
+                return web.json_response({"error": "invalid_request"}, status=400)
             raise web.HTTPBadRequest(text="Нарушение контракта v0") from error
         except (KeyError, ValueError) as error:
             raise web.HTTPBadRequest(text="Некорректный запрос") from error

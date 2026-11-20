@@ -3,20 +3,46 @@
 import base64
 import hashlib
 import json
+import shutil
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 import pytest
+import yaml
 
-from baf.runner.batch import REPORT_RESERVE_BYTES, execute, launch_request, run_batch
-from baf.runner.catalog import B5_COMMAND, load_checkpoint
+from baf.runner.batch import execute, launch_request, report_reserve_bytes, run_batch
+from baf.runner.catalog import B5_COMMAND, Task, load_dataset
 from baf.runner.transport import GatewayClient, GatewayError, TransportError
 from contracts import fingerprint, validate
 from services.common.storage import StorageBudgetExceeded
 
 TIME = "2026-11-06T12:00:00+00:00"
+CONTROL_DATASET = Path("baf/control.yaml")
+
+
+def control_tasks() -> tuple[Task, ...]:
+    return load_dataset(CONTROL_DATASET)
+
+
+@pytest.fixture
+def extended_dataset(tmp_path: Path) -> Path:
+    root = tmp_path / "dataset with spaces"
+    shutil.copytree(CONTROL_DATASET.parent, root)
+    data = yaml.safe_load(CONTROL_DATASET.read_text())
+    entries = data["tasks"]
+    custom = root / "custom-task"
+    shutil.copytree(root / entries[0]["directory"], custom)
+    spec_path = custom / "task.yaml"
+    spec = yaml.safe_load(spec_path.read_text())
+    spec.update(id="C1", baf="composite")
+    spec_path.write_text(yaml.safe_dump(spec))
+    entries.insert(1, entries.pop())
+    entries.append({"id": "C1", "directory": "custom-task"})
+    manifest = root / "selected dataset.yaml"
+    manifest.write_text(yaml.safe_dump(data))
+    return manifest
 
 
 def result_for(request: dict, files: dict[str, str]) -> dict:
@@ -121,7 +147,12 @@ class FakeGateway:
     def _finish(self, request: dict) -> dict:
         files = {item["path"]: item["content"] for item in request["files"]}
         task_id = request["task_id"]
-        answers = {"B1.1": "8137", "B2.1": "src/utils/dates.py", "B5.1": "11"}
+        answers = {
+            "B1.1": "8137",
+            "B2.1": "src/utils/dates.py",
+            "B5.1": "11",
+            "C1": "8137",
+        }
         if task_id in answers:
             files["answer.txt"] = answers[task_id]
         elif task_id == "B3.1":
@@ -190,14 +221,18 @@ class FakeGateway:
 
 def test_all_five_and_history(tmp_path: Path) -> None:
     gateway = FakeGateway()
-    first_path, report = run_batch(gateway, profile="mock", results=tmp_path)
+    first_path, report = run_batch(
+        gateway, tasks=control_tasks(), profile="mock", results=tmp_path
+    )
     assert report["success"] is True
     assert report["evaluated"] == 5
     assert report["technical_skips"] == 0
     assert len(gateway.requests) == 5
     assert len({request["run_id"] for request in gateway.requests}) == 5
     original = first_path.read_bytes()
-    second_path, second = run_batch(FakeGateway(), profile="mock", results=tmp_path)
+    second_path, second = run_batch(
+        FakeGateway(), tasks=control_tasks(), profile="mock", results=tmp_path
+    )
     assert second["success"]
     assert first_path != second_path
     assert first_path.read_bytes() == original
@@ -207,7 +242,9 @@ def test_all_five_and_history(tmp_path: Path) -> None:
 @pytest.mark.parametrize("mode", ["wrong", "budget"])
 def test_quality_and_budget_do_not_stop_next_task(tmp_path: Path, mode: str) -> None:
     gateway = FakeGateway(mode)
-    _, report = run_batch(gateway, profile="mock", results=tmp_path)
+    _, report = run_batch(
+        gateway, tasks=control_tasks(), profile="mock", results=tmp_path
+    )
     assert len(gateway.requests) == 5
     assert report["success"] is False
     assert report["evaluated"] == 5
@@ -216,14 +253,18 @@ def test_quality_and_budget_do_not_stop_next_task(tmp_path: Path, mode: str) -> 
 
 @pytest.mark.parametrize("mode,count", [("cleanup", 1), ("storage", 2)])
 def test_infrastructure_failure_stops_and_records_all_ids(
-    tmp_path: Path, mode: str, count: int
+    tmp_path: Path, extended_dataset: Path, mode: str, count: int
 ) -> None:
     gateway = FakeGateway(mode)
-    _, report = run_batch(gateway, profile="mock", results=tmp_path)
+    tasks = load_dataset(extended_dataset)
+    _, report = run_batch(gateway, tasks=tasks, profile="mock", results=tmp_path)
     assert len(gateway.requests) == count
-    assert len(report["tasks"]) == 5
+    assert [row["task_id"] for row in report["tasks"]] == [task.id for task in tasks]
     assert report["success"] is False
-    assert all(row["skip_reason"] for row in report["tasks"][count:])
+    for row in report["tasks"][count:]:
+        assert row["run_id"] is None
+        assert row["checker_status"] == "not_run"
+        assert row["skip_reason"]
     if mode == "cleanup":
         assert report["tasks"][0]["checker_status"] == "passed"
         assert report["tasks"][0]["result"]["cleanup_status"] == "failed"
@@ -231,7 +272,9 @@ def test_infrastructure_failure_stops_and_records_all_ids(
 
 def test_lost_accept_response_uses_lookup_without_replay(tmp_path: Path) -> None:
     gateway = FakeGateway("lost_response")
-    _, report = run_batch(gateway, profile="mock", results=tmp_path)
+    _, report = run_batch(
+        gateway, tasks=control_tasks(), profile="mock", results=tmp_path
+    )
     assert report["success"]
     assert len(gateway.requests) == 5
 
@@ -241,7 +284,9 @@ def test_untrusted_or_partial_copy_never_reaches_checker(
     tmp_path: Path, mode: str
 ) -> None:
     gateway = FakeGateway(mode)
-    _, report = run_batch(gateway, profile="mock", results=tmp_path)
+    _, report = run_batch(
+        gateway, tasks=control_tasks(), profile="mock", results=tmp_path
+    )
     assert report["tasks"][0]["checker_status"] == "not_run_collection_failed"
     assert report["wrong_answers"] == 0
     assert report["technical_skips"] == 5
@@ -252,20 +297,49 @@ def test_untrusted_or_partial_copy_never_reaches_checker(
 
 
 def test_missing_evidence_is_not_wrong_answer(tmp_path: Path) -> None:
-    _, report = run_batch(FakeGateway("evidence"), profile="mock", results=tmp_path)
+    _, report = run_batch(
+        FakeGateway("evidence"),
+        tasks=control_tasks(),
+        profile="mock",
+        results=tmp_path,
+    )
     assert report["tasks"][4]["checker_status"] == "not_run_evidence_incomplete"
     assert report["evaluated"] == 4
     assert report["wrong_answers"] == 0
     assert report["technical_skips"] == 1
 
 
+@pytest.mark.parametrize("reason", ["", "\ud800"])
+def test_invalid_checker_reason_keeps_full_report(
+    tmp_path: Path, extended_dataset: Path, reason: str
+) -> None:
+    tasks = load_dataset(extended_dataset)
+    checker_result = json.dumps({"pass": True, "reason": reason})
+    tasks[0].checker_path.write_text(f"print({checker_result!r})\n")
+    results = tmp_path / "results"
+    gateway = FakeGateway()
+
+    path, report = run_batch(gateway, tasks=tasks, profile="mock", results=results)
+
+    assert path.is_file() and not list(results.glob("*.reserve"))
+    assert len(gateway.requests) == 1
+    assert [row["checker_status"] for row in report["tasks"]] == [
+        "checker_error",
+        *["not_run"] * (len(tasks) - 1),
+    ]
+    assert not report["success"]
+    assert report["technical_skips"] == len(tasks)
+
+
 def test_report_reserve_survives_no_room_for_run(tmp_path: Path) -> None:
     gateway = FakeGateway()
+    tasks = control_tasks()
     _, report = run_batch(
         gateway,
+        tasks=tasks,
         profile="mock",
         results=tmp_path,
-        storage_limit=REPORT_RESERVE_BYTES + 100,
+        storage_limit=report_reserve_bytes(len(tasks)) + 100,
     )
     assert gateway.requests == []
     assert report["technical_skips"] == 5
@@ -275,14 +349,20 @@ def test_report_reserve_survives_no_room_for_run(tmp_path: Path) -> None:
 def test_no_batch_starts_without_report_reserve(tmp_path: Path) -> None:
     gateway = FakeGateway()
     with pytest.raises(StorageBudgetExceeded):
-        run_batch(gateway, profile="mock", results=tmp_path, storage_limit=100)
+        run_batch(
+            gateway,
+            tasks=control_tasks(),
+            profile="mock",
+            results=tmp_path,
+            storage_limit=100,
+        )
     assert gateway.requests == []
 
 
 def test_fixture_input_is_fresh_per_attempt(tmp_path: Path) -> None:
     gateway = FakeGateway()
-    run_batch(gateway, profile="mock", results=tmp_path)
-    tasks = load_checkpoint()
+    run_batch(gateway, tasks=control_tasks(), profile="mock", results=tmp_path)
+    tasks = control_tasks()
     for request, task in zip(gateway.requests, tasks, strict=True):
         assert {file["path"] for file in request["files"]} == {
             file.path for file in task.fixture_files
@@ -293,7 +373,7 @@ def test_fixture_input_is_fresh_per_attempt(tmp_path: Path) -> None:
 def test_cancellation_waits_for_terminal_cleanup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    request = launch_request(load_checkpoint()[0], "run-cancel", "mock")
+    request = launch_request(control_tasks()[0], "run-cancel", "mock")
     request["timeout_s"] = 1
     gateway = FakeGateway()
     terminal = gateway._finish(request)
@@ -332,7 +412,9 @@ def test_artifact_budget_error_uses_report_reserve(
 
     monkeypatch.setattr("baf.runner.batch.save_bundle", exhausted)
     gateway = FakeGateway()
-    path, report = run_batch(gateway, profile="mock", results=tmp_path)
+    path, report = run_batch(
+        gateway, tasks=control_tasks(), profile="mock", results=tmp_path
+    )
     assert path.is_file()
     assert len(gateway.requests) == 1
     assert report["tasks"][0]["result"]["execution_status"] == "success"
@@ -346,10 +428,22 @@ def test_cli_exit_code(
 ) -> None:
     from baf.runner import __main__ as cli
 
-    monkeypatch.setattr("sys.argv", ["baf.runner", "--profile", "mock"])
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "baf.runner",
+            "--protocol",
+            "v0",
+            "--dataset",
+            str(CONTROL_DATASET),
+            "--profile",
+            "mock",
+        ],
+    )
     monkeypatch.setenv("CLIENT_TOKEN", "test-token-" * 4)
     report = {
         "success": success,
+        "tasks": [None] * 5,
         "evaluated": 5,
         "wrong_answers": int(not success),
         "technical_skips": 0,
@@ -358,6 +452,80 @@ def test_cli_exit_code(
         cli, "run_batch", lambda *args, **kwargs: (tmp_path / "report.json", report)
     )
     assert cli.main() == code
+
+
+def invoke_cli(
+    monkeypatch: pytest.MonkeyPatch,
+    dataset: Path,
+    results: Path,
+    gateway: FakeGateway,
+) -> int:
+    from baf.runner import __main__ as cli
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "baf.runner",
+            "--protocol",
+            "v0",
+            "--dataset",
+            str(dataset),
+            "--profile",
+            "mock",
+            "--results",
+            str(results),
+        ],
+    )
+    monkeypatch.setattr(cli, "GatewayClient", lambda *args, **kwargs: gateway)
+    return cli.main()
+
+
+@pytest.mark.parametrize("count", [1, 6])
+def test_cli_runs_tasks_in_dataset_order(
+    tmp_path: Path, extended_dataset: Path, monkeypatch: pytest.MonkeyPatch, count: int
+) -> None:
+    order = ["B1.1", "B5.1", "B2.1", "B3.1", "B4.1", "C1"]
+    if count == 1:
+        manifest = yaml.safe_load(extended_dataset.read_text())
+        manifest["tasks"] = manifest["tasks"][-1:]
+        extended_dataset.write_text(yaml.safe_dump(manifest))
+        order = ["C1"]
+    gateway = FakeGateway()
+    results = tmp_path / "results"
+
+    assert invoke_cli(monkeypatch, extended_dataset, results, gateway) == 0
+    assert [request["task_id"] for request in gateway.requests] == order
+    assert {request["provider_profile"] for request in gateway.requests} == {"mock"}
+    report_path = next(results.glob("*/report.json"))
+    report = json.loads(report_path.read_text())
+    assert [row["task_id"] for row in report["tasks"]] == order
+    assert report["evaluated"] == count
+    assert report["technical_skips"] == 0
+    if count == 6:
+        assert gateway.requests[1]["read_only_paths"] == ["input"]
+        assert report["tasks"][1]["result"]["evidence_status"] == "complete"
+        assert report["tasks"][1]["checker_status"] == "passed"
+
+
+@pytest.mark.parametrize("fault", ["empty", "duplicate", "missing_checker"])
+def test_invalid_dataset_does_not_start_any_task(
+    tmp_path: Path, extended_dataset: Path, monkeypatch: pytest.MonkeyPatch, fault: str
+) -> None:
+    manifest = yaml.safe_load(extended_dataset.read_text())
+    if fault == "empty":
+        manifest["tasks"] = []
+    elif fault == "duplicate":
+        manifest["tasks"].append(manifest["tasks"][0].copy())
+    else:
+        checker = (
+            extended_dataset.parent / manifest["tasks"][-1]["directory"] / "check.py"
+        )
+        checker.unlink()
+    extended_dataset.write_text(yaml.safe_dump(manifest))
+    gateway = FakeGateway()
+
+    assert invoke_cli(monkeypatch, extended_dataset, tmp_path / "results", gateway) == 2
+    assert gateway.requests == []
 
 
 @pytest.mark.parametrize("failure", ["transport", "storage"])
@@ -391,7 +559,9 @@ def test_b5_missing_copy_precedes_missing_evidence(
 
     monkeypatch.setattr(batch, "save_bundle", save_with_failure)
     gateway = IncompleteB5Gateway()
-    path, report = run_batch(gateway, profile="mock", results=tmp_path)
+    path, report = run_batch(
+        gateway, tasks=control_tasks(), profile="mock", results=tmp_path
+    )
     validate("report", report)
     assert path.is_file()
     assert len(report["tasks"]) == 5
@@ -461,7 +631,9 @@ def test_server_accounting_failure_stops_even_after_successful_cleanup(
             return state
 
     gateway = AccountingFailure()
-    report_path, report = run_batch(gateway, profile="mock", results=tmp_path)
+    report_path, report = run_batch(
+        gateway, tasks=control_tasks(), profile="mock", results=tmp_path
+    )
     assert report_path.exists()
     assert len(gateway.requests) == 1
     assert report["tasks"][0]["result"]["execution_status"] == "success"
@@ -475,7 +647,7 @@ def test_runner_waits_for_auth_provision_and_agent_deadlines(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     clock = {"now": 0.0}
-    request = launch_request(load_checkpoint()[0], "slow-preparation", "mock")
+    request = launch_request(control_tasks()[0], "slow-preparation", "mock")
     terminal = FakeGateway()._finish(request)
 
     class DelayedPreparation:

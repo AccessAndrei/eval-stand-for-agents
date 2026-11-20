@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eval-stand.local/contracts/mounted-v1",
+  "title": "Контракты рабочей сессии v1",
+  "$defs": {
+    "id": {"type": "string", "minLength": 32, "maxLength": 32, "pattern": "^[0-9a-f]{32}$"},
+    "version": {"const": "v1"},
+    "profile": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$", "not": {"pattern": "[^A-Za-z0-9_-]"}},
+    "mode": {"enum": ["ro", "rw"]},
+    "owner_proof": {"type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[0-9a-f]{64}$"},
+    "ssh_public_key": {"type": "string", "minLength": 60, "maxLength": 256},
+    "session_open": {
+      "type": "object",
+      "properties": {
+        "session_id": {"$ref": "#/$defs/id"},
+        "profile": {"$ref": "#/$defs/profile"},
+        "mode": {"$ref": "#/$defs/mode"}
+      },
+      "required": ["session_id", "profile", "mode"],
+      "additionalProperties": false
+    },
+    "session_tunnel": {
+      "type": "object",
+      "properties": {
+        "tunnel_public_key": {"$ref": "#/$defs/ssh_public_key"},
+        "export_host_public_key": {"$ref": "#/$defs/ssh_public_key"}
+      },
+      "required": ["tunnel_public_key", "export_host_public_key"],
+      "additionalProperties": false
+    },
+    "run_start": {
+      "type": "object",
+      "properties": {
+        "run_id": {"$ref": "#/$defs/id"},
+        "prompt": {"type": "string", "minLength": 1, "maxLength": 12000},
+        "timeout_s": {"type": "integer", "minimum": 1, "maximum": 600},
+        "task_id": {"type": ["string", "null"], "maxLength": 120}
+      },
+      "required": ["run_id", "prompt", "timeout_s"],
+      "additionalProperties": false
+    },
+    "run_identity": {
+      "type": "object",
+      "properties": {
+        "version": {"$ref": "#/$defs/version"},
+        "session_id": {"$ref": "#/$defs/id"},
+        "run_id": {"$ref": "#/$defs/id"}
+      },
+      "required": ["version", "session_id", "run_id"]
+    },
+    "executor_message": {
+      "type": "object",
+      "description": "Сообщение закреплённого Codex exec-server поверх stdio.",
+      "properties": {
+        "jsonrpc": {"const": "2.0"},
+        "id": {"type": ["string", "integer", "null"]},
+        "method": {"type": "string"},
+        "params": {"type": "object"}
+      },
+      "anyOf": [
+        {"required": ["method"]},
+        {"required": ["id", "result"]},
+        {"required": ["id", "error"]}
+      ]
+    },
+    "executor_tool_request": {
+      "allOf": [
+        {"$ref": "#/$defs/executor_message"},
+        {
+          "required": ["id", "method", "params"],
+          "oneOf": [
+            {"properties": {"method": {"const": "process/start"}, "params": {"required": ["processId", "argv", "cwd"]}}},
+            {"properties": {"method": {"const": "fs/readFile"}, "params": {"required": ["path"]}}},
+            {"properties": {"method": {"const": "fs/writeFile"}, "params": {"required": ["path", "dataBase64"]}}}
+          ]
+        }
+      ]
+    },
+    "manager_turn": {
+      "allOf": [
+        {"$ref": "#/$defs/run_identity"},
+        {
+          "type": "object",
+          "properties": {
+            "project_id": {"type": "string", "minLength": 1, "maxLength": 64},
+            "handle": {"type": "string", "pattern": "^[0-9a-f]{48}$"},
+            "timeout_s": {"type": "integer", "minimum": 1, "maximum": 600}
+          },
+          "required": ["project_id", "handle"]
+        }
+      ]
+    },
+    "manager_provision": {
+      "type": "object",
+      "properties": {
+        "version": {"$ref": "#/$defs/version"},
+        "project_id": {"type": "string", "minLength": 1, "maxLength": 64},
+        "session_id": {"$ref": "#/$defs/id"},
+        "workspace_ref": {"$ref": "#/$defs/id"},
+        "mode": {"$ref": "#/$defs/mode"}
+      },
+      "required": ["version", "project_id", "session_id", "workspace_ref", "mode"],
+      "additionalProperties": false
+    },
+    "manager_release": {
+      "type": "object",
+      "properties": {
+        "version": {"$ref": "#/$defs/version"},
+        "project_id": {"type": "string", "minLength": 1, "maxLength": 64},
+        "session_id": {"$ref": "#/$defs/id"},
+        "handle": {"type": "string", "pattern": "^[0-9a-f]{48}$"}
+      },
+      "required": ["version", "project_id", "session_id", "handle"],
+      "additionalProperties": false
+    },
+    "manager_collection": {
+      "allOf": [
+        {"$ref": "#/$defs/run_identity"},
+        {
+          "type": "object",
+          "properties": {
+            "collection_status": {"enum": ["complete", "incomplete"]},
+            "writers_stopped": {"type": "boolean"},
+            "execution_started": {"type": "boolean"},
+            "errors": {"type": "array"}
+          },
+          "required": ["collection_status", "writers_stopped", "execution_started", "errors"]
+        }
+      ]
+    },
+    "run_result": {
+      "allOf": [
+        {"$ref": "#/$defs/run_identity"},
+        {
+          "type": "object",
+          "properties": {
+            "execution_status": {"type": "string"},
+            "collection_status": {"enum": ["not_started", "complete", "incomplete"]},
+            "writers_stopped": {"type": "boolean"},
+            "harness_released": {"type": "boolean"},
+            "native_continuation_safe": {"type": "boolean"},
+            "proxy_closed": {"type": "boolean"},
+            "continuation_ready": {"type": "boolean"},
+            "evidence_status": {"enum": ["not_required", "complete", "incomplete"]},
+            "errors": {"type": "array", "maxItems": 16},
+            "tokens": {"type": "object"},
+            "provenance": {"type": "object"}
+          },
+          "required": ["execution_status", "collection_status", "writers_stopped", "evidence_status", "errors", "tokens", "provenance"]
+        }
+      ]
+    },
+    "event": {
+      "type": "object",
+      "properties": {
+        "seq": {"type": "integer", "minimum": 1},
+        "type": {"enum": ["message", "tool", "result"]}
+      },
+      "required": ["seq", "type"],
+      "allOf": [
+        {
+          "if": {"properties": {"type": {"const": "message"}}},
+          "then": {"properties": {"text": {"type": "string"}}, "required": ["text"]}
+        },
+        {
+          "if": {"properties": {"type": {"const": "tool"}}},
+          "then": {"properties": {"tool": {"type": "object"}}, "required": ["tool"]}
+        },
+        {
+          "if": {"properties": {"type": {"const": "result"}}},
+          "then": {"properties": {"result": {"$ref": "#/$defs/run_result"}}, "required": ["result"]}
+        }
+      ]
+    }
+  }
+}

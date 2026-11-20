@@ -1,0 +1,12 @@
+[
+  {
+    "type": "function_call",
+    "name": "exec_command",
+    "arguments": "{\"cmd\": \"cat /work/spec.md\", \"yield_time_ms\": 1000}"
+  },
+  {
+    "type": "custom_tool_call",
+    "name": "apply_patch",
+    "input": "*** Begin Patch\n*** Add File: /work/config.json\n+{\"service\": \"calendar\", \"port\": 8137, \"enabled\": true, \"tags\": [\"local\", \"test\"]}\n*** End Patch"
+  }
+]

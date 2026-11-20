@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from baf.runner.catalog import load_checkpoint
+from baf.runner.catalog import load_dataset
 from baf.runner.checkers import run_checker
 
 
@@ -12,7 +12,7 @@ def test_invalid_answer_is_wrong_answer_not_checker_failure(
 ) -> None:
     (tmp_path / "answer.txt").write_bytes(content)
     result = run_checker(
-        load_checkpoint()[0],
+        load_dataset(Path("baf/control.yaml"))[0],
         tmp_path,
         run_id="invalid-answer",
         collection_status="complete",

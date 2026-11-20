@@ -1,4 +1,4 @@
-"""Авторизованный вход в последовательный runtime первого чекпоинта."""
+"""Авторизованный вход в серверную среду оценки агентов."""
 
 import asyncio
 import json
@@ -11,12 +11,18 @@ from contracts import validate
 from services.common.http import authenticated
 from services.common.storage import StorageBudgetExceeded
 from services.gateway.clients import Client, RemoteError
+from services.gateway.mounted_runs import register_mounted_runs
 from services.gateway.runtime import IO_ERRORS, Runtime
+from services.gateway.sessions import MountedSessions, session_errors
 from services.gateway.store import Busy, Conflict, RunStore
 
 
-def create_app(runtime: Runtime, token: str) -> web.Application:
-    app = web.Application(middlewares=[authenticated(token)], client_max_size=2_500_000)
+def create_app(
+    runtime: Runtime, token: str, *, mounted: MountedSessions | None = None
+) -> web.Application:
+    app = web.Application(
+        middlewares=[authenticated(token), session_errors], client_max_size=2_500_000
+    )
     tasks: dict[str, asyncio.Task] = {}
     lock = asyncio.Lock()
     ready = False
@@ -165,6 +171,9 @@ def create_app(runtime: Runtime, token: str) -> web.Application:
             web.get("/v0/runs/{run_id}/events", events),
         ]
     )
+    if mounted is not None:
+        app.add_routes(mounted.routes())
+        register_mounted_runs(app, runtime, mounted)
     app.on_startup.append(startup)
     app.on_shutdown.append(shutdown)
     return app
@@ -185,8 +194,20 @@ def main() -> None:
         project,
         provenance,
     )
+    mounted = None
+    if broker_url := os.environ.get("BROKER_URL"):
+        mounted = MountedSessions(
+            store,
+            runtime.manager,
+            Client(broker_url, os.environ["BROKER_TOKEN"], project),
+            runtime.proxy,
+            project,
+            int(os.environ.get("WORKSPACE_SSH_PORT", "2222")),
+        )
     web.run_app(
-        create_app(runtime, os.environ["CLIENT_TOKEN"]), port=8080, access_log=None
+        create_app(runtime, os.environ["CLIENT_TOKEN"], mounted=mounted),
+        port=8080,
+        access_log=None,
     )
 
 

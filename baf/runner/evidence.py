@@ -7,12 +7,19 @@ run/thread/turn id, item_id, command, cwd, source; completed добавляет 
 Поле complete выставляет сборщик доказательства, независимо от stdout.
 """
 
-import shlex
 from dataclasses import dataclass
 
-from baf.runner.catalog import B5_COMMAND
+from contracts.tool_evidence import (
+    B5_COMMAND,
+    B5_COMMAND_KIND,
+    B5_CWD,
+    B5_SOURCES,
+    is_b5_command,
+)
 
 MAX_EVENTS = 256
+TOOL_FIELDS = ("type", "phase", "thread_id", "turn_id", "item_id")
+RUN_IDENTITY_FIELDS = ("version", "session_id", "run_id")
 
 
 @dataclass(frozen=True)
@@ -20,21 +27,6 @@ class EvidenceResult:
     complete: bool
     passed: bool
     reason: str
-
-
-def _allowed_command(command: object) -> bool:
-    if not isinstance(command, str):
-        return False
-    try:
-        # Codex сериализует argv через shlex_join. Внутри разрешённой оболочки
-        # принимается только точная строка, без иной shell-грамматики.
-        return command == B5_COMMAND or shlex.split(command, posix=True) == [
-            "/usr/bin/bash",
-            "-lc",
-            B5_COMMAND,
-        ]
-    except ValueError:
-        return False
 
 
 def _pairs(events: list[dict], evidence: dict) -> EvidenceResult:
@@ -82,7 +74,7 @@ def _pairs(events: list[dict], evidence: dict) -> EvidenceResult:
                 return EvidenceResult(False, False, "Потерян код завершения")
             finished.add(item)
             succeeded |= (
-                _allowed_command(event.get("command"))
+                is_b5_command(event.get("command"))
                 and event.get("cwd") == "/work"
                 and event.get("source") in ("agent", "unifiedExecStartup")
                 and event["exit_code"] == 0
@@ -121,3 +113,95 @@ def validate_evidence(
     if not isinstance(events, list) or len(events) > MAX_EVENTS:
         return EvidenceResult(False, False, "Список событий повреждён или усечён")
     return _pairs(events, evidence)
+
+
+def mounted_evidence_metadata(value: object) -> dict | None:
+    """Оставить только ограниченные метаданные смонтированного доказательства."""
+    if not isinstance(value, dict):
+        return None
+    events = value.get("events")
+    if not isinstance(events, list) or len(events) > MAX_EVENTS:
+        return None
+    if any(not isinstance(event, dict) for event in events):
+        return None
+    top_fields = (*RUN_IDENTITY_FIELDS, "codex_version", "thread_id", "turn_id")
+    fields = (*TOOL_FIELDS, "session_id", "run_id", "command_kind", "source")
+
+    def identifiers(source: dict, keys: tuple[str, ...]) -> dict:
+        return {
+            key: text
+            for key in keys
+            if isinstance(text := source.get(key), str)
+            and 0 < len(text) <= 128
+            and text.isascii()
+            and text.replace("-", "").replace("_", "").replace(".", "").isalnum()
+        }
+
+    metadata = []
+    for event in events:
+        item = identifiers(event, fields)
+        # Пустое или непонятное значение маркера не равно отсутствию команды.
+        if any(
+            field in event and field not in item
+            for field in ("command_kind", "session_id", "run_id")
+        ):
+            return None
+        exit_code = event.get("exit_code")
+        if type(exit_code) is int and -(2**31) <= exit_code < 2**31:
+            item["exit_code"] = exit_code
+        metadata.append(item)
+    return {**identifiers(value, top_fields), "events": metadata}
+
+
+def mounted_b5_evidence(result: dict, input_manifest: dict[str, str]) -> dict | None:
+    """Нормализовать события после сверки локальной защиты входов вызывающим кодом."""
+    value = mounted_evidence_metadata(result.get("evidence"))
+    if (
+        result.get("evidence_status") != "complete"
+        or value is None
+        or result.get("version") != "v1"
+        or any(
+            not isinstance(result.get(field), str) or value.get(field) != result[field]
+            for field in RUN_IDENTITY_FIELDS
+        )
+    ):
+        return None
+    thread_id, turn_id = value.get("thread_id"), value.get("turn_id")
+    if thread_id is None or turn_id is None:
+        return None
+    events = []
+    for item in value["events"]:
+        if "command_kind" not in item:
+            continue
+        if (
+            item["command_kind"] != B5_COMMAND_KIND
+            or item.get("type") != "commandExecution"
+            or item.get("thread_id") != thread_id
+            or item.get("turn_id") != turn_id
+            or item.get("source") not in B5_SOURCES
+            or any(
+                item.get(field, value[field]) != value[field]
+                for field in ("session_id", "run_id")
+            )
+        ):
+            return None
+        fields = (*TOOL_FIELDS, "source", "exit_code")
+        events.append(
+            {
+                **{field: item[field] for field in fields if field in item},
+                "command": B5_COMMAND,
+                "cwd": B5_CWD,
+                "run_id": value["run_id"],
+            }
+        )
+    return {
+        "version": "v0",
+        "codex_version": value.get("codex_version"),
+        "run_id": value["run_id"],
+        "thread_id": thread_id,
+        "turn_id": turn_id,
+        "complete": True,
+        "protected_inputs": True,
+        "input_manifest": input_manifest,
+        "events": events,
+    }

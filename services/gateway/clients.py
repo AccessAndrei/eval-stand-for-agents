@@ -44,9 +44,22 @@ class Client:
                             "storage_budget_exceeded",
                             "busy",
                             "auth_error",
+                            "workspace_mount_lost",
+                            "workspace_not_ready",
+                            "cleanup_failed",
+                            "foreign_resource",
+                            "invalid_workspace_request",
+                            "unknown_workspace",
+                            "unknown_workspace_run",
+                            "workspace_run_conflict",
+                            "execution_cannot_replay",
+                            "foreign_project",
+                            "foreign_handle",
+                            "docker_unavailable",
+                            "proxy_ref_fenced",
                         }:
                             code = candidate
                     except (ValueError, AttributeError):
                         pass
                     raise RemoteError(response.status, code)
-                return json.loads(raw)
+                return {} if response.status == 204 else json.loads(raw)

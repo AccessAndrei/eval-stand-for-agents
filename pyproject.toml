@@ -5,6 +5,7 @@ description = "Локальный стенд оценки базовых аге�
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "aiohttp>=3.12,<4",
+    "asyncssh==2.24.1",
     "jsonschema>=4.23,<5",
     "PyYAML==6.0.3",
 ]

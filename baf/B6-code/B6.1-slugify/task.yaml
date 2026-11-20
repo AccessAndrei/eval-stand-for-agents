@@ -1,0 +1,8 @@
+id: B6.1
+baf: B6
+level: simple
+messages:
+  - "Реализуй функцию slugify(text) по spec.md. Запиши код в slug.py в корне рабочей папки."
+answer_file: slug.py
+timeout_s: 180
+fixture_files: [spec.md]

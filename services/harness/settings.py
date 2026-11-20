@@ -7,6 +7,13 @@ from pathlib import Path
 
 VERSION = "0.159.3"
 COMMIT = "01fc69f4026735edfdf6789820549727a4867b11"
+ROUTING_FILES = ("config.toml", "environments.toml", "models.json")
+
+
+def _write_setting(path: Path, data: str) -> None:
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+        stream.write(data)
 
 
 def configure(
@@ -20,8 +27,11 @@ def configure(
     proxy_url: str,
     inference_token: str,
     model: str,
+    session_id: str | None = None,
+    reuse_home: bool = False,
 ) -> dict[str, str]:
-    home.mkdir(parents=True, exist_ok=False, mode=0o700)
+    if not reuse_home:
+        home.mkdir(parents=True, exist_ok=False, mode=0o700)
     quote = json.dumps
     relay_env = {
         "MANAGER_TUNNEL_URL": manager_url,
@@ -31,6 +41,8 @@ def configure(
         "RUN_ID": run_id,
         "PYTHONPATH": str(Path(__file__).resolve().parents[2]),
     }
+    if session_id is not None:
+        relay_env["SANDBOX_SESSION_ID"] = session_id
     env_toml = [
         "include_local = false",
         'default = "sandbox"',
@@ -43,7 +55,7 @@ def configure(
         "[environments.env]",
         *(f"{key} = {quote(value)}" for key, value in relay_env.items()),
     ]
-    (home / "environments.toml").write_text("\n".join(env_toml) + "\n")
+    _write_setting(home / "environments.toml", "\n".join(env_toml) + "\n")
     config = [
         f"model = {quote(model)}",
         'model_provider = "stand"',
@@ -69,11 +81,9 @@ def configure(
         "hooks = false",
     ]
     catalog = home / "models.json"
-    catalog.write_text(json.dumps({"models": [sandbox_model(model)]}))
+    _write_setting(catalog, json.dumps({"models": [sandbox_model(model)]}))
     config.insert(0, f"model_catalog_json = {quote(str(catalog))}")
-    (home / "config.toml").write_text("\n".join(config) + "\n")
-    for path in home.iterdir():
-        path.chmod(0o600)
+    _write_setting(home / "config.toml", "\n".join(config) + "\n")
     return {
         "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
         "HOME": str(home),

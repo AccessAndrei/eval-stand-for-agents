@@ -1,0 +1,6 @@
+# Используется вместе с compose.mock.yml. HTTP fixture остаётся во внутренней сети.
+services:
+  mock-provider:
+    command: ["/opt/venv/bin/python", "/mock-scripts/resume_probe.py"]
+    environment:
+      PROBE_CONTEXT: "${PROBE_CONTEXT:?Задайте синтетический PROBE_CONTEXT}"

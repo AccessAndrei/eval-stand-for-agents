@@ -1,0 +1,8 @@
+id: B8.1
+baf: B8
+level: simple
+messages:
+  - "Сложи суммы продаж из всех пяти файлов sales/*.csv за первый квартал 2026 года, с 1 января по 31 марта включительно. Запиши в answer.txt только итоговое целое число без символа валюты."
+answer_file: answer.txt
+timeout_s: 180
+fixture_files: [sales/north.csv, sales/south.csv, sales/west.csv, sales/east.csv, sales/central.csv]

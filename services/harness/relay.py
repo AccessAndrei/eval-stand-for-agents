@@ -10,20 +10,26 @@ async def relay() -> None:
     address = urlsplit(os.environ["MANAGER_TUNNEL_URL"])
     if address.scheme != "http" or not address.hostname:
         raise ValueError("Требуется внутренний HTTP-адрес менеджера")
-    reader, writer = await asyncio.wait_for(
-        asyncio.open_connection(address.hostname, address.port or 8082), 10
-    )
     handle = os.environ["SANDBOX_HANDLE"]
     token = os.environ["MANAGER_TOKEN"]
     project = os.environ["PROJECT_ID"]
     run_id = os.environ["RUN_ID"]
-    if any("\r" in item or "\n" in item for item in (handle, token, project, run_id)):
+    session_id = os.environ.get("SANDBOX_SESSION_ID")
+    if any(
+        "\r" in item or "\n" in item
+        for item in (handle, token, project, run_id, session_id or "")
+    ):
         raise ValueError("Недопустимый заголовок")
+    version = "v0" if session_id is None else "v1"
+    session_header = "" if session_id is None else f"X-Session-ID: {session_id}\r\n"
+    reader, writer = await asyncio.wait_for(
+        asyncio.open_connection(address.hostname, address.port or 8082), 10
+    )
     writer.write(
         (
-            f"CONNECT /v0/environments/{handle} HTTP/1.1\r\n"
+            f"CONNECT /{version}/environments/{handle} HTTP/1.1\r\n"
             f"Host: {address.hostname}\r\nAuthorization: Bearer {token}\r\n"
-            f"X-Project-ID: {project}\r\nX-Run-ID: {run_id}\r\n\r\n"
+            f"X-Project-ID: {project}\r\nX-Run-ID: {run_id}\r\n{session_header}\r\n"
         ).encode()
     )
     await writer.drain()
