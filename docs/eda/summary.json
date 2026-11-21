@@ -1,0 +1,233 @@
+{
+  "ready": {
+    "by_function": {
+      "B1": 1,
+      "B2": 1,
+      "B3": 1,
+      "B4": 1,
+      "B5": 1
+    },
+    "by_level": {
+      "simple": 5
+    },
+    "description_only_ids": [
+      "B1.2",
+      "B1.3",
+      "B2.2",
+      "B2.3",
+      "B3.2",
+      "B3.3",
+      "B4.2",
+      "B4.3",
+      "B5.2",
+      "B5.3",
+      "B6.1",
+      "B6.2",
+      "B6.3",
+      "B7.1",
+      "B7.2",
+      "B7.3",
+      "B8.1",
+      "B8.2",
+      "B8.3",
+      "C1",
+      "C2",
+      "C3"
+    ],
+    "tasks": 5
+  },
+  "results": {
+    "batch_id": "d72a5329d7aa4117bb41aa7995be74c9",
+    "batch_wall_s": 51.231583,
+    "checker_statuses": {
+      "passed": 5
+    },
+    "duration_s": {
+      "count": 5,
+      "max": 12.069962755002052,
+      "mean": 9.84377567120173,
+      "median": 9.803709879000962,
+      "min": 8.556572962002974,
+      "sum": 49.218878356008645
+    },
+    "finished_at": "2026-11-06T21:20:58.890817+00:00",
+    "missing_measurements": {
+      "duration_s": 0,
+      "tokens_cached": 0,
+      "tokens_input": 0,
+      "tokens_output": 0
+    },
+    "model_metadata_missing": [
+      "model_version",
+      "intelligence_index",
+      "checked_at"
+    ],
+    "models": [
+      "gpt-6-luna"
+    ],
+    "runs": 5,
+    "started_at": "2026-11-06T21:20:07.659234+00:00",
+    "tokens_cached": 4096,
+    "tokens_input": 42064,
+    "tokens_output": 723,
+    "tokens_total": {
+      "count": 5,
+      "max": 12271,
+      "mean": 8557.4,
+      "median": 7245,
+      "min": 6874,
+      "sum": 42787
+    },
+    "unknown_token_runs": 0
+  },
+  "sources": [
+    {
+      "path": "baf/B1-read/B1.1-service-port/check.py",
+      "sha256": "b40c0c34b8af5a29c49f9e5d90ecb07cc045ecac46ff2c857c5ab8f7758c3aed"
+    },
+    {
+      "path": "baf/B1-read/B1.1-service-port/fixture/README.md",
+      "sha256": "9d1823c424a40da7392f2fa8b75aa84f077a43dfab7dfef625902fbecc1b5051"
+    },
+    {
+      "path": "baf/B1-read/B1.1-service-port/fixture/config/app.yaml",
+      "sha256": "27fd818568b7a3521e12d11b6ef8ec1c4e90f0ab82c07e1077948df7fda1563d"
+    },
+    {
+      "path": "baf/B1-read/B1.1-service-port/fixture/src/main.py",
+      "sha256": "0ea6aff0ba9a0468c8189d7a817c9fffc86ed0e7ad7fefa8b4dfabda17c277b7"
+    },
+    {
+      "path": "baf/B1-read/B1.1-service-port/task.yaml",
+      "sha256": "334fe7db7342701a7ad70de45b7f0341c502f96d7e290708cfc749b91798f684"
+    },
+    {
+      "path": "baf/B2-search/B2.1-parse-date/check.py",
+      "sha256": "d5b2d1ad8ee38d0c330fd0a4488dd77902459aef2f85fb2fac57af7448751a38"
+    },
+    {
+      "path": "baf/B2-search/B2.1-parse-date/fixture/README.md",
+      "sha256": "5789844ff7d216f23dbe8b57d021d5b87dbe1f0ed76570ab680701f0eb4334d8"
+    },
+    {
+      "path": "baf/B2-search/B2.1-parse-date/fixture/src/main.py",
+      "sha256": "17c4ba608b778f875d6af3a94d3bc31d6361a0ef3c44ad2d97fe84cd9a62a996"
+    },
+    {
+      "path": "baf/B2-search/B2.1-parse-date/fixture/src/utils/dates.py",
+      "sha256": "05768288c40c1ebc4d2ee4b6fe34d2c603f62c0b122799d9ba0cf702f01dce10"
+    },
+    {
+      "path": "baf/B2-search/B2.1-parse-date/fixture/src/utils/numbers.py",
+      "sha256": "95e6293e408d68374056cc0e025436c952838ca44f8775d7393c5f424e38a857"
+    },
+    {
+      "path": "baf/B2-search/B2.1-parse-date/task.yaml",
+      "sha256": "b8d5c8ab1469f4f22732499b1e3ec92252bcaf54a8ef5d60d41ee9a9b2bec642"
+    },
+    {
+      "path": "baf/B3-create/B3.1-config-json/check.py",
+      "sha256": "4530d67727ddf12946e835654e7be2fa8654988874c0ec8aa1ef4b350d520807"
+    },
+    {
+      "path": "baf/B3-create/B3.1-config-json/fixture/spec.md",
+      "sha256": "46f1b91652e74623422aff46bebfb42a43c930703071fdf2eff2f0694d9565e2"
+    },
+    {
+      "path": "baf/B3-create/B3.1-config-json/schema.json",
+      "sha256": "9b0d88400edd6ddcf85f18acdc3d9dd022cb2610000c558f371e7db6044ba5e8"
+    },
+    {
+      "path": "baf/B3-create/B3.1-config-json/task.yaml",
+      "sha256": "a13a024ebdbe778cfab607c39f96a6200adf6eda9ba56da3e5091d574fc9193d"
+    },
+    {
+      "path": "baf/B4-edit/B4.1-install-version/check.py",
+      "sha256": "3387e03edbd2ed5410ad63995c24f3bc32aadf6894bc1eb26935f17c26da7a51"
+    },
+    {
+      "path": "baf/B4-edit/B4.1-install-version/fixture/README.md",
+      "sha256": "f5db22a6cfaea13e292817ca14b5eb4ad38f78ab819e425e6a43bad14644c775"
+    },
+    {
+      "path": "baf/B4-edit/B4.1-install-version/fixture/settings.ini",
+      "sha256": "8370e42c9cec0e3de32bf92ea04b9703e0430bd09b6957a443972d251a89e4f5"
+    },
+    {
+      "path": "baf/B4-edit/B4.1-install-version/task.yaml",
+      "sha256": "d8441e5aa33adc88f0ea8518f2da46fa6b503a46582e05cc1bde98701385f6d7"
+    },
+    {
+      "path": "baf/B5-tool/B5.1-median/check.py",
+      "sha256": "f83f35d6ec5f60395a9ae4a8ffd3b9b96bfaf4277f64fc5b02202b0a52e19180"
+    },
+    {
+      "path": "baf/B5-tool/B5.1-median/fixture/input/data.csv",
+      "sha256": "53e07e8452ad03910d65267e8c9533477b49a690d06c8f00e0cde55b3d02dedc"
+    },
+    {
+      "path": "baf/B5-tool/B5.1-median/fixture/input/stats.py",
+      "sha256": "49866a44687ea17b9d6ef3a58bca89de7960915658d602aea554c3ea0adeb615"
+    },
+    {
+      "path": "baf/B5-tool/B5.1-median/task.yaml",
+      "sha256": "fe9888446b1ed4f2fc7799a9a213c70eedebd23329621d1c2082e83eca311d8e"
+    },
+    {
+      "path": "baf/catalog.yaml",
+      "sha256": "1a4f72891e157801c404a7ff46bf5d02e24863d68f047e30b13bb4ee2fcb928e"
+    },
+    {
+      "path": "baf/checkpoint1.yaml",
+      "sha256": "fc04b048aef0dc13a17c57d69620b0e20a5609a82e20ae14c79aa92089c3efc3"
+    },
+    {
+      "path": "baf/runner/catalog.py",
+      "sha256": "b035fb27a88913906729ea4581dc992cecda107681793df197f1de0ff241c38f"
+    },
+    {
+      "path": "baf/runner/evidence.py",
+      "sha256": "6c28bced130af883a6cb3861e6ebe81e913103068c58e5220a5ee5fc07810fee"
+    },
+    {
+      "path": "baf/runner/task_checks.py",
+      "sha256": "2ded1a66a6c4ca25242cd0b821bdc13bc189bb0d7b2f4d08e0b2f89109032842"
+    },
+    {
+      "path": "contracts/v0.schema.json",
+      "sha256": "9a2a41690a48f6ac907df05128594c948652c6c4a19cb22a64e371116e5d2d8a"
+    },
+    {
+      "path": "contracts/validation.py",
+      "sha256": "e9d5d16df7039774945f2558e3dfb82a79ec52cdc2236ed9432e20e957f8f4c9"
+    },
+    {
+      "path": "results/d72a5329d7aa4117bb41aa7995be74c9/report.json",
+      "sha256": "017362a63661c4baab92682b46d8256722df50be7e2ea21022ece57ac833c764"
+    },
+    {
+      "path": "scripts/analyze_baf.py",
+      "sha256": "53fa5d514a7f356f99bfa9212ab811f90f9a2fd26428c4f1144164a51356e495"
+    }
+  ],
+  "specification": {
+    "by_function": {
+      "B1": 3,
+      "B2": 3,
+      "B3": 3,
+      "B4": 3,
+      "B5": 3,
+      "B6": 3,
+      "B7": 3,
+      "B8": 3,
+      "composite": 3
+    },
+    "by_level": {
+      "composite": 3,
+      "medium": 8,
+      "simple": 8,
+      "trap": 8
+    },
+    "tasks": 27
+  }
+}

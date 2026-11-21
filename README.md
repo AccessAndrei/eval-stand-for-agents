@@ -45,6 +45,9 @@ make down
 UI, smoke-БАФ, полный БАФ и замеры пока не реализованы; их команды завершаются ошибкой.
 Установка хуков: `.venv/bin/pre-commit install`.
 
+Анализ оценочных данных: `.venv/bin/python -m scripts.analyze_baf`.
+[Данные, графики и выводы](docs/eda.md).
+
 ## Структура
 
 ```text
@@ -61,6 +64,7 @@ docs/harness.md                устройство харнесса
 docs/baf.md                    свои БАФ и правила оценки
 docs/report.md                 замеры, матрица БАФ × пара, выводы
 docs/ml_system_design_doc.md    дизайн-документ
+docs/eda.md                     анализ оценочных данных
 results/                       результаты прогонов
 ```
 
